@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image, Dimensions } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getImageUrl } from '../constants/api';
@@ -43,11 +43,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ item, width = DEFAULT_CARD_WI
                     style={styles.favoriteButton}
                     onPress={() => onFavoritePress && onFavoritePress(item.id || item._id)}
                 >
-                    {/* <MaterialIcons
+                    <Icon
                         name={item.isFavorite ? "favorite" : "favorite-border"}
                         size={18}
                         color={item.isFavorite ? "#f43f5e" : "#94a3b8"}
-                    /> */}
+                    />
                 </TouchableOpacity>
             </View>
 

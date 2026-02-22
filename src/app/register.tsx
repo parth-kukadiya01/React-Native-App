@@ -17,7 +17,7 @@ import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { Colors } from '../constants/Colors';
 import { authService } from '../services/authService';
 
@@ -88,7 +88,7 @@ export default function RegisterScreen() {
                     style={styles.backButton}
                     onPress={() => navigation.goBack()}
                 >
-                    {/* <MaterialIcons name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} /> */}
+                    <Icon name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Registration</Text>
                 <View style={{ width: 40 }} />
@@ -110,7 +110,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Full Name</Text>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="person" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="person" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="John Doe"
@@ -124,7 +124,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Company Name</Text>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="storefront" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="storefront" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Jewelry Co."
@@ -138,7 +138,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Business Email</Text>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="alternate-email" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="alternate-email" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="contact@company.com"
@@ -153,7 +153,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Phone Number</Text>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="smartphone" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="smartphone" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="+1 (555) 000-0000"
@@ -171,7 +171,7 @@ export default function RegisterScreen() {
                                     <Text style={styles.requiredBadge}>REQUIRED</Text>
                                 </View>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="verified-user" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="verified-user" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Registration Number"
@@ -185,7 +185,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Password</Text>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="lock" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="lock" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="••••••••"
@@ -195,7 +195,7 @@ export default function RegisterScreen() {
                                         onChangeText={(text) => handleChange('password', text)}
                                     />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                                        {/* <MaterialIcons name="visibility" size={20} color="#94a3b8" /> */}
+                                        <Icon name="visibility" size={20} color="#94a3b8" />
                                     </TouchableOpacity>
                                 </View>
                             </View>

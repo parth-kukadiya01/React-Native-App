@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GlassView from '../components/GlassView';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,11 +42,11 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
                     onPress={() => navigation.navigate(item.route.replace('/', '') as any)}
                 >
                     <View>
-                        {/* <MaterialIcons
+                        <Icon
                             name={item.icon as any}
                             size={26}
                             color={isActive(item.id) ? '#4A90E2' : '#94a3b8'}
-                        /> */}
+                        />
                         {item.id === 'Orders' && cartCount > 0 && (
                             <View style={styles.badgeCount}>
                                 <Text style={styles.badgeText}>{cartCount}</Text>

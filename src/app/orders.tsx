@@ -16,7 +16,7 @@ import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -177,11 +177,11 @@ export default function OrderHistoryScreen() {
             <GlassView blurType="light" blurAmount={80} style={[styles.header, { paddingTop: insets.top }]}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-                        {/* <MaterialIcons name="arrow-back-ios" size={20} color="#334155" /> */}
+                        <Icon name="arrow-back-ios" size={20} color="#334155" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Order History</Text>
                     <TouchableOpacity style={styles.iconButton}>
-                        {/* <MaterialIcons name="search" size={24} color="#334155" /> */}
+                        <Icon name="search" size={24} color="#334155" />
                     </TouchableOpacity>
                 </View>
 
@@ -231,7 +231,7 @@ export default function OrderHistoryScreen() {
                                         </View>
                                         <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
                                             {/* {statusConfig.icon && (
-                                                // <MaterialIcons name={statusConfig.icon as any} size={12} color={statusConfig.color} style={{ marginRight: 4 }} />
+                                                // <Icon name={statusConfig.icon as any} size={12} color={statusConfig.color} style={{ marginRight: 4 }} />
                                             )} */}
                                             <Text style={[styles.statusText, { color: statusConfig.color }]}>
                                                 {statusConfig.label.toUpperCase()}
@@ -253,11 +253,11 @@ export default function OrderHistoryScreen() {
                                     <View style={styles.cardFooter}>
                                         <View style={styles.itemsInfo}>
                                             <View style={styles.itemsIcon}>
-                                                {/* <MaterialIcons name="inventory-2" size={16} color="#475569" /> */}
+                                                <Icon name="inventory-2" size={16} color="#475569" />
                                             </View>
                                             <Text style={styles.itemsText}>{order.items.length} Luxury Items</Text>
                                         </View>
-                                        {/* <MaterialIcons name="chevron-right" size={20} color="#94a3b8" /> */}
+                                        <Icon name="chevron-right" size={20} color="#94a3b8" />
                                     </View>
 
                                     {['SHIPMENT', 'SHIPPED', 'COMPLETED', 'DELIVERED'].includes(order.status) && (
@@ -266,7 +266,7 @@ export default function OrderHistoryScreen() {
                                                 style={styles.invoiceButton}
                                                 onPress={() => handleDownloadInvoice(order.orderId)}
                                             >
-                                                {/* <MaterialIcons name="receipt-long" size={20} color="#1e293b" /> */}
+                                                <Icon name="receipt-long" size={20} color="#1e293b" />
                                                 <Text style={styles.invoiceText}>View Digital Invoice</Text>
                                             </TouchableOpacity>
                                         </View>
@@ -277,7 +277,7 @@ export default function OrderHistoryScreen() {
                     })
                 ) : (
                     <View style={styles.emptyState}>
-                        {/* <MaterialIcons name="shopping-bag" size={48} color="#cbd5e1" /> */}
+                        <Icon name="shopping-bag" size={48} color="#cbd5e1" />
                         <Text style={styles.emptyText}>No orders found</Text>
                     </View>
                 )}

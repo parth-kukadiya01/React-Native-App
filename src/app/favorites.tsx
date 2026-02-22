@@ -14,7 +14,7 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,7 +92,7 @@ export default function FavoritesScreen() {
                     style={styles.favoriteButton}
                     onPress={() => removeFavorite((item.id || item._id).toString())}
                 >
-                    {/* <MaterialIcons name="favorite" size={18} color="#f43f5e" /> */}
+                    <Icon name="favorite" size={18} color="#f43f5e" />
                 </TouchableOpacity>
             </View>
 
@@ -152,7 +152,7 @@ export default function FavoritesScreen() {
                 </View>
             ) : favorites.length === 0 ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 100 }}>
-                    {/* <MaterialIcons name="favorite-border" size={64} color="#cbd5e1" /> */}
+                    <Icon name="favorite-border" size={64} color="#cbd5e1" />
                     <Text style={{ marginTop: 16, color: '#1e293b', fontSize: 18, fontWeight: '700' }}>No favorites yet</Text>
                     <Text style={{ marginTop: 6, color: '#64748b', fontSize: 13, fontWeight: '500', textAlign: 'center', paddingHorizontal: 40 }}>
                         Tap the heart icon on any product to save it here

@@ -16,7 +16,7 @@ import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { Colors } from '../constants/Colors';
 import { authService } from '../services/authService';
 
@@ -91,7 +91,7 @@ export default function ResetPasswordScreen() {
                     style={styles.backButton}
                     onPress={() => navigation.goBack()}
                 >
-                    {/* <MaterialIcons name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} /> */}
+                    <Icon name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Reset Password</Text>
                 <View style={{ width: 44 }} />
@@ -105,7 +105,7 @@ export default function ResetPasswordScreen() {
 
                     <View style={styles.contentContainer}>
                         <View style={styles.iconWrapper}>
-                            {/* <MaterialIcons name="security" size={64} color="#6366f1" /> */}
+                            <Icon name="security" size={64} color="#6366f1" />
                         </View>
 
                         <Text style={styles.title}>Enter Verification Code</Text>
@@ -119,7 +119,7 @@ export default function ResetPasswordScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>VERIFICATION CODE</Text>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="vpn-key" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="vpn-key" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={[styles.input, { letterSpacing: 4, fontSize: 18 }]}
                                         placeholder="123456"
@@ -136,7 +136,7 @@ export default function ResetPasswordScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>NEW PASSWORD</Text>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="lock" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="lock" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Min 6 characters"
@@ -146,7 +146,7 @@ export default function ResetPasswordScreen() {
                                         onChangeText={setPassword}
                                     />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                                        {/* <MaterialIcons name={showPassword ? "visibility-off" : "visibility"} size={20} color="#94a3b8" /> */}
+                                        <Icon name={showPassword ? "visibility-off" : "visibility"} size={20} color="#94a3b8" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -155,7 +155,7 @@ export default function ResetPasswordScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>CONFIRM PASSWORD</Text>
                                 <View style={styles.inputContainer}>
-                                    {/* <MaterialIcons name="lock-outline" size={20} color="#94a3b8" style={styles.inputIcon} /> */}
+                                    <Icon name="lock-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Re-enter password"

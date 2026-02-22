@@ -12,7 +12,7 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 // import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -194,10 +194,10 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.headerRight}>
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('search' as any)}>
-                        {/* <MaterialIcons name="search" size={24} color="#475569" /> */}
+                        <Icon name="search" size={24} color="#475569" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('notifications' as any)}>
-                        {/* <MaterialIcons name="notifications-none" size={24} color="#475569" /> */}
+                        <Icon name="notifications-none" size={24} color="#475569" />
                         <View style={styles.notificationDot} />
                     </TouchableOpacity>
                 </View>
@@ -301,11 +301,11 @@ export default function HomeScreen() {
                                 onPress={() => navigation.navigate('catalog' as any, { categoryId: cat._id, categoryName: cat.name })}
                             >
                                 <View style={[styles.categoryIconContainer, activeCategory === cat._id && styles.activeCategoryIconContainer]}>
-                                    {/* <MaterialIcons
+                                    <Icon
                                         name={getIconName(cat.icon) as any}
                                         size={24}
                                         color={activeCategory === cat._id ? '#fff' : '#64748b'}
-                                    /> */}
+                                    />
                                 </View>
                                 <Text style={[styles.categoryName, activeCategory === cat._id && styles.activeCategoryName]}>
                                     {cat.name}
@@ -340,11 +340,11 @@ export default function HomeScreen() {
                                         style={styles.productImage}
                                     />
                                     <TouchableOpacity style={styles.favoriteButton} onPress={() => toggleFavorite(item._id || item.id)}>
-                                        {/* <MaterialIcons
+                                        <Icon
                                             name={item.isFavorite ? "favorite" : "favorite-border"}
                                             size={18}
                                             color={item.isFavorite ? "#f43f5e" : "#94a3b8"}
-                                        /> */}
+                                        />
                                     </TouchableOpacity>
                                 </View>
 
@@ -411,11 +411,11 @@ export default function HomeScreen() {
                                             style={styles.productImage}
                                         />
                                         <TouchableOpacity style={styles.favoriteButton} onPress={() => toggleFavorite(item._id || item.id)}>
-                                            {/* <MaterialIcons
+                                            <Icon
                                                 name={item.isFavorite ? "favorite" : "favorite-border"}
                                                 size={18}
                                                 color={item.isFavorite ? "#f43f5e" : "#94a3b8"}
-                                            /> */}
+                                            />
                                         </TouchableOpacity>
                                     </View>
 
@@ -469,7 +469,7 @@ export default function HomeScreen() {
                             <Text style={styles.featuredSubtitle}>PREMIUM WHOLESALE PORTFOLIO</Text>
                         </View>
                         <GlassView blurType="light" blurAmount={50} style={styles.featureArrow}>
-                            {/* <MaterialIcons name="arrow-forward-ios" size={16} color="#1e293b" /> */}
+                            <Icon name="arrow-forward-ios" size={16} color="#1e293b" />
                         </GlassView>
                     </View>
                 </View>

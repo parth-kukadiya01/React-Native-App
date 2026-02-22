@@ -12,7 +12,7 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -115,7 +115,7 @@ export default function ProductDetailsScreen() {
                 title="Product Detail"
                 rightElement={
                     <TouchableOpacity style={styles.iconButton}>
-                        {/* <MaterialIcons name="more-horiz" size={24} color="#1a1a1a" /> */}
+                        <Icon name="more-horiz" size={24} color="#1a1a1a" />
                     </TouchableOpacity>
                 }
             />
@@ -170,7 +170,7 @@ export default function ProductDetailsScreen() {
                                 </View>
 
                                 <View style={styles.zoomHint}>
-                                    {/* <MaterialIcons name="fullscreen" size={14} color="#94a3b8" /> */}
+                                    <Icon name="fullscreen" size={14} color="#94a3b8" />
                                     <Text style={styles.zoomHintText}>Tap to zoom</Text>
                                 </View>
                             </GlassView>
@@ -320,14 +320,14 @@ export default function ProductDetailsScreen() {
                                         style={styles.quantityBtn}
                                         onPress={() => setQuantity(Math.max(1, quantity - 1))}
                                     >
-                                        {/* <MaterialIcons name="remove" size={18} color="rgba(26, 26, 26, 0.6)" /> */}
+                                        <Icon name="remove" size={18} color="rgba(26, 26, 26, 0.6)" />
                                     </TouchableOpacity>
                                     <Text style={styles.quantityText}>{quantity}</Text>
                                     <TouchableOpacity
                                         style={styles.quantityBtn}
                                         onPress={() => setQuantity(quantity + 1)}
                                     >
-                                        {/* <MaterialIcons name="add" size={18} color="rgba(26, 26, 26, 0.6)" /> */}
+                                        <Icon name="add" size={18} color="rgba(26, 26, 26, 0.6)" />
                                     </TouchableOpacity>
                                 </View>
 
@@ -352,7 +352,7 @@ export default function ProductDetailsScreen() {
                                         <ActivityIndicator color="white" />
                                     ) : (
                                         <>
-                                            {/* <MaterialIcons name="shopping-bag" size={20} color="rgba(255,255,255,0.8)" /> */}
+                                            <Icon name="shopping-bag" size={20} color="rgba(255,255,255,0.8)" />
                                             <Text style={styles.addToCartText}>ADD TO CART</Text>
                                         </>
                                     )}
@@ -361,7 +361,7 @@ export default function ProductDetailsScreen() {
                             </View>
 
                             <View style={styles.wholesaleBadge}>
-                                {/* <MaterialIcons name="verified" size={14} color="rgba(5, 150, 105, 0.7)" /> */}
+                                <Icon name="verified" size={14} color="rgba(5, 150, 105, 0.7)" />
                                 <Text style={styles.wholesaleText}>WHOLESALE STOCK CONFIRMED</Text>
                             </View>
                         </GlassView>

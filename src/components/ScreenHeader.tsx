@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import GlassView from '../components/GlassView';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,7 +35,7 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
             <View style={styles.headerLeft}>
                 {showBack && (
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
-                        {/* <MaterialIcons name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} /> */}
+                        <Icon name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} />
                     </TouchableOpacity>
                 )}
 
@@ -62,20 +62,20 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
             <View style={styles.headerRight}>
                 {showSearch && (
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('search' as any)}>
-                        {/* <MaterialIcons name="search" size={24} color="#475569" /> */}
+                        <Icon name="search" size={24} color="#475569" />
                     </TouchableOpacity>
                 )}
 
                 {showNotification && (
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('notifications' as any)}>
-                        {/* <MaterialIcons name="notifications-none" size={24} color="#475569" /> */}
+                        <Icon name="notifications-none" size={24} color="#475569" />
                         <View style={styles.notificationDot} />
                     </TouchableOpacity>
                 )}
 
                 {showCart && (
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('cart' as any)}>
-                        {/* <MaterialIcons name="shopping-bag" size={22} color="#475569" /> */}
+                        <Icon name="shopping-bag" size={22} color="#475569" />
                         {cartCount > 0 && (
                             <View style={styles.cartBadge}>
                                 <Text style={styles.cartBadgeText}>{cartCount}</Text>

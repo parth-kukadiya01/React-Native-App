@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { Colors } from '../constants/Colors';
 import ScreenHeader from '../components/ScreenHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,7 +110,7 @@ export default function NotificationsScreen() {
                 title="Notifications"
                 rightElement={
                     <TouchableOpacity style={styles.iconButton} onPress={fetchNotifications}>
-                        {/* <MaterialIcons name="refresh" size={24} color="#1e293b" /> */}
+                        <Icon name="refresh" size={24} color="#1e293b" />
                     </TouchableOpacity>
                 }
             />
@@ -126,7 +126,7 @@ export default function NotificationsScreen() {
                     <ActivityIndicator size="large" color={Colors.light.primary} style={{ marginTop: 20 }} />
                 ) : notifications.length === 0 ? (
                     <View style={styles.emptyContainer}>
-                        {/* <MaterialIcons name="notifications-none" size={48} color="#94a3b8" /> */}
+                        <Icon name="notifications-none" size={48} color="#94a3b8" />
                         <Text style={styles.emptyText}>No notifications yet</Text>
                     </View>
                 ) : (
@@ -138,7 +138,7 @@ export default function NotificationsScreen() {
                         >
                             <GlassView blurType="light" blurAmount={40} style={styles.card}>
                                 <View style={[styles.iconContainer, { backgroundColor: `${getColor(item.type)}20` }]}>
-                                    {/* <MaterialIcons name={getIcon(item.type) as any} size={24} color={getColor(item.type)} /> */}
+                                    <Icon name={getIcon(item.type) as any} size={24} color={getColor(item.type)} />
                                 </View>
                                 <View style={styles.textContainer}>
                                     <View style={styles.row}>

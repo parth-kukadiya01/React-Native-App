@@ -15,7 +15,7 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 // import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -181,11 +181,11 @@ export default function CatalogScreen() {
                     style={styles.favoriteButton}
                     onPress={() => handleToggleFavorite(item)}
                 >
-                    {/* <MaterialIcons
+                    <Icon
                         name={item.isFavorite ? "favorite" : "favorite-border"}
                         size={18}
                         color={item.isFavorite ? "#f43f5e" : "#1e293b"}
-                    /> */}
+                    />
                 </TouchableOpacity>
 
                 {item.stockStatus && item.stockStatus !== 'In Stock' && (
@@ -235,13 +235,13 @@ export default function CatalogScreen() {
                 {/* Top Header Row */}
                 <View style={styles.topBar}>
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
-                        {/* <MaterialIcons name="arrow-back-ios" size={20} color="#1e293b" style={{ marginLeft: 6 }} /> */}
+                        <Icon name="arrow-back-ios" size={20} color="#1e293b" style={{ marginLeft: 6 }} />
                     </TouchableOpacity>
 
                     <Text style={styles.headerTitle}>CATALOG</Text>
 
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('cart' as any)}>
-                        {/* <MaterialIcons name="shopping-bag" size={20} color="#1e293b" /> */}
+                        <Icon name="shopping-bag" size={20} color="#1e293b" />
                         {cartCount > 0 && (
                             <View style={styles.cartBadge}>
                                 <Text style={styles.cartBadgeText}>{cartCount}</Text>
@@ -254,7 +254,7 @@ export default function CatalogScreen() {
                 <View style={styles.searchContainer}>
                     <View style={styles.searchBar}>
                         <View style={styles.searchIcon}>
-                            {/* <MaterialIcons name="search" size={20} color="#64748b" /> */}
+                            <Icon name="search" size={20} color="#64748b" />
                         </View>
                         <TextInput
                             style={styles.searchInput}
@@ -274,7 +274,7 @@ export default function CatalogScreen() {
                                     setActiveFilter('All');
                                 }}
                             >
-                                {/* <MaterialIcons name="close" size={18} color="#94a3b8" /> */}
+                                <Icon name="close" size={18} color="#94a3b8" />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -333,14 +333,14 @@ export default function CatalogScreen() {
                                     </Text>
                                 </View>
                                 <TouchableOpacity style={styles.refineButton} onPress={() => setShowRefine(true)}>
-                                    {/* <MaterialIcons name="tune" size={16} color="#0f172a" /> */}
+                                    <Icon name="tune" size={16} color="#0f172a" />
                                     <Text style={styles.refineText}>Refine</Text>
                                 </TouchableOpacity>
                             </View>
                         }
                         ListEmptyComponent={
                             <View style={{ alignItems: 'center', paddingTop: 60, paddingBottom: 60 }}>
-                                {/* <MaterialIcons name="inventory-2" size={56} color="#cbd5e1" /> */}
+                                <Icon name="inventory-2" size={56} color="#cbd5e1" />
                                 <Text style={{ marginTop: 16, color: '#64748b', fontSize: 16, fontWeight: '600' }}>No products found</Text>
                                 <Text style={{ marginTop: 4, color: '#94a3b8', fontSize: 13 }}>Try adjusting your filters</Text>
                             </View>
@@ -359,7 +359,7 @@ export default function CatalogScreen() {
                         <View style={styles.refineModalHeader}>
                             <Text style={styles.refineModalTitle}>REFINE RESULTS</Text>
                             <TouchableOpacity onPress={() => setShowRefine(false)}>
-                                {/* <MaterialIcons name="close" size={24} color="#1e293b" /> */}
+                                <Icon name="close" size={24} color="#1e293b" />
                             </TouchableOpacity>
                         </View>
 
@@ -389,7 +389,7 @@ export default function CatalogScreen() {
                                         sortBy === option.value && sortOrder === option.order && styles.refineOptionTextActive,
                                     ]}>{option.label}</Text>
                                     {/* {sortBy === option.value && sortOrder === option.order && (
-                                        <MaterialIcons name="check" size={18} color="#fff" />
+                                        <Icon name="check" size={18} color="#fff" />
                                     )} */}
                                 </TouchableOpacity>
                             ))}

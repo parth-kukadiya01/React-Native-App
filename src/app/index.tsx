@@ -17,7 +17,7 @@ import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { Colors } from '../constants/Colors';
 
 import { authService } from '../services/authService';
@@ -114,7 +114,7 @@ export default function LoginScreen() {
                                         },
                                     ]}
                                 >
-                                    {/* <MaterialIcons name="verified-user" size={18} color={Colors.light.primaryDark} /> */}
+                                    <Icon name="verified-user" size={18} color={Colors.light.primaryDark} />
                                     <Text style={[styles.badgeText, { color: isDark ? Colors.light.primary : '#334155' }]}>SV GOLD WHOLESALE</Text>
                                 </View>
                             </View>
@@ -139,7 +139,7 @@ export default function LoginScreen() {
                                     </Text>
                                     <View style={styles.inputWrapper}>
                                         <View style={styles.iconContainer}>
-                                            {/* <MaterialIcons name="badge" size={24} color="#9ca3af" /> */}
+                                            <Icon name="badge" size={24} color="#9ca3af" />
                                         </View>
                                         <TextInput
                                             style={[
@@ -165,7 +165,7 @@ export default function LoginScreen() {
                                     </Text>
                                     <View style={styles.inputWrapper}>
                                         <View style={styles.iconContainer}>
-                                            {/* <MaterialIcons name="lock" size={24} color="#9ca3af" /> */}
+                                            <Icon name="lock" size={24} color="#9ca3af" />
                                         </View>
                                         <TextInput
                                             style={[
@@ -186,7 +186,7 @@ export default function LoginScreen() {
                                             style={styles.eyeIcon}
                                             onPress={() => setShowPassword(!showPassword)}
                                         >
-                                            {/* <MaterialIcons name="visibility" size={24} color="#9ca3af" /> */}
+                                            <Icon name="visibility" size={24} color="#9ca3af" />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -210,7 +210,7 @@ export default function LoginScreen() {
                                                 },
                                             ]}
                                         >
-                                            {/* {rememberSession && <MaterialIcons name="check" size={12} color="white" />} */}
+                                            {/* {rememberSession && <Icon name="check" size={12} color="white" />} */}
                                         </View>
                                         <Text
                                             style={[
@@ -255,7 +255,7 @@ export default function LoginScreen() {
                                                 <Text style={styles.loginButtonText}>
                                                     Login to Dashboard
                                                 </Text>
-                                                {/* <MaterialIcons name="arrow-forward" size={20} color="white" style={styles.buttonIcon} /> */}
+                                                <Icon name="arrow-forward" size={20} color="white" style={styles.buttonIcon} />
                                             </>
                                         )}
                                     </TouchableOpacity>

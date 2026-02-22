@@ -12,7 +12,7 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -286,7 +286,7 @@ export default function CartScreen() {
                                 end={{ x: 1, y: 1 }}
                                 style={StyleSheet.absoluteFillObject}
                             />
-                            {/* <MaterialIcons name="add" size={24} color="white" /> */}
+                            <Icon name="add" size={24} color="white" />
                         </TouchableOpacity>
                     </View>
                 </GlassView>
@@ -301,7 +301,7 @@ export default function CartScreen() {
                 <View style={styles.itemsList}>
                     {!loading && cartItems.length === 0 && (
                         <View style={{ alignItems: 'center', marginTop: 40 }}>
-                            {/* <MaterialIcons name="shopping-cart" size={64} color="#cbd5e1" /> */}
+                            <Icon name="shopping-cart" size={64} color="#cbd5e1" />
                             <Text style={{ marginTop: 16, fontSize: 16, color: '#64748b' }}>Your cart is empty</Text>
                             <TouchableOpacity
                                 style={{ marginTop: 24, padding: 12, backgroundColor: '#6366f1', borderRadius: 8 }}
@@ -322,7 +322,7 @@ export default function CartScreen() {
                                             <Text style={styles.itemSku}>{item.product?.sku || 'NO-SKU'}</Text>
                                         </View>
                                         <TouchableOpacity style={styles.removeButton} onPress={() => removeItem(item._id)}>
-                                            {/* <MaterialIcons name="close" size={20} color="#94a3b8" /> */}
+                                            <Icon name="close" size={20} color="#94a3b8" />
                                         </TouchableOpacity>
                                     </View>
                                     <View style={styles.tagsRow}>
@@ -346,11 +346,11 @@ export default function CartScreen() {
                                     <Text style={[styles.controlLabel, { textAlign: 'right' }]}>QUANTITY</Text>
                                     <View style={styles.qtyControl}>
                                         <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item._id, item.quantity, -1)}>
-                                            {/* <MaterialIcons name="remove" size={16} color="#475569" /> */}
+                                            <Icon name="remove" size={16} color="#475569" />
                                         </TouchableOpacity>
                                         <Text style={styles.qtyText}>{item.quantity}</Text>
                                         <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item._id, item.quantity, 1)}>
-                                            {/* <MaterialIcons name="add" size={16} color="#475569" /> */}
+                                            <Icon name="add" size={16} color="#475569" />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -394,7 +394,7 @@ export default function CartScreen() {
 
                 {/* Info Card */}
                 <GlassView blurType="light" blurAmount={30} style={styles.infoCard}>
-                    {/* <MaterialIcons name="info" size={20} color="#3b82f6" /> */}
+                    <Icon name="info" size={20} color="#3b82f6" />
                     <Text style={styles.infoText}>
                         Estimated weights are provided for reference. Final verified gross weight and shipping documentation will be provided upon dispatch. Delivery dates are item-specific.
                     </Text>
@@ -416,7 +416,7 @@ export default function CartScreen() {
                         style={StyleSheet.absoluteFillObject}
                     />
                     <Text style={styles.submitText}>{submitting ? 'Placing Order...' : 'Submit Order Request'}</Text>
-                    {/* {!submitting && <MaterialIcons name="send" size={20} color="white" />} */}
+                    {/* {!submitting && <Icon name="send" size={20} color="white" />} */}
                     {submitting && <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} />}
                 </TouchableOpacity>
             </GlassView>
@@ -426,11 +426,11 @@ export default function CartScreen() {
                 <View style={tpinStyles.overlay}>
                     <GlassView blurType="dark" blurAmount={40} style={tpinStyles.modalCard}>
                         <TouchableOpacity style={tpinStyles.closeBtn} onPress={() => setShowTpinModal(false)}>
-                            {/* <MaterialIcons name="close" size={24} color="#94a3b8" /> */}
+                            <Icon name="close" size={24} color="#94a3b8" />
                         </TouchableOpacity>
 
                         <View style={tpinStyles.iconCircle}>
-                            {/* <MaterialIcons name={tpinMode === 'verify' ? 'lock' : 'vpn-key'} size={32} color="#3b82f6" /> */}
+                            <Icon name={tpinMode === 'verify' ? 'lock' : 'vpn-key'} size={32} color="#3b82f6" />
                         </View>
 
                         <Text style={tpinStyles.title}>
@@ -482,7 +482,7 @@ export default function CartScreen() {
 
                         {!!tpinError && (
                             <View style={tpinStyles.errorRow}>
-                                {/* <MaterialIcons name="error-outline" size={16} color="#ef4444" /> */}
+                                <Icon name="error-outline" size={16} color="#ef4444" />
                                 <Text style={tpinStyles.errorText}>{tpinError}</Text>
                             </View>
                         )}

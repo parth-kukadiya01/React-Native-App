@@ -14,7 +14,7 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -292,11 +292,11 @@ export default function SearchScreen() {
             <GlassView blurType="light" blurAmount={80} style={[styles.header, { paddingTop: insets.top + 12 }]}>
                 <View style={styles.headerRow}>
                     <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        {/* <MaterialIcons name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} /> */}
+                        <Icon name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} />
                     </TouchableOpacity>
 
                     <View style={styles.searchBarContainer}>
-                        {/* <MaterialIcons name="search" size={20} color="#94a3b8" /> */}
+                        <Icon name="search" size={20} color="#94a3b8" />
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search products, SKU..."
@@ -309,13 +309,13 @@ export default function SearchScreen() {
                         />
                         {query.length > 0 && (
                             <TouchableOpacity onPress={() => { setQuery(''); setHasSearched(false); setResults([]); }}>
-                                {/* <MaterialIcons name="close" size={20} color="#94a3b8" /> */}
+                                <Icon name="close" size={20} color="#94a3b8" />
                             </TouchableOpacity>
                         )}
                     </View>
 
                     <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilters(!showFilters)}>
-                        {/* <MaterialIcons name="tune" size={22} color={showFilters ? '#6366f1' : '#475569'} /> */}
+                        <Icon name="tune" size={22} color={showFilters ? '#6366f1' : '#475569'} />
                     </TouchableOpacity>
                 </View>
 
@@ -367,7 +367,7 @@ export default function SearchScreen() {
                                     {opt.label}
                                 </Text>
                                 {/* {sortBy === opt.sortBy && sortOrder === opt.sortOrder && (
-                                    <MaterialIcons name="check" size={18} color="#6366f1" />
+                                    <Icon name="check" size={18} color="#6366f1" />
                                 )} */}
                             </TouchableOpacity>
                         ))}
@@ -410,7 +410,7 @@ export default function SearchScreen() {
                             />
                         ) : (
                             <View style={styles.emptyContainer}>
-                                {/* <MaterialIcons name="search-off" size={48} color="#cbd5e1" /> */}
+                                <Icon name="search-off" size={48} color="#cbd5e1" />
                                 <Text style={styles.emptyTitle}>No products found</Text>
                                 <Text style={styles.emptySubtitle}>Try a different search term or category</Text>
                             </View>
@@ -444,10 +444,10 @@ export default function SearchScreen() {
                                             }}
                                         >
                                             <View style={styles.recentLeft}>
-                                                {/* <MaterialIcons name="history" size={20} color="#94a3b8" /> */}
+                                                <Icon name="history" size={20} color="#94a3b8" />
                                                 <Text style={styles.recentText}>{term}</Text>
                                             </View>
-                                            {/* <MaterialIcons name="north-west" size={18} color="#cbd5e1" /> */}
+                                            <Icon name="north-west" size={18} color="#cbd5e1" />
                                         </TouchableOpacity>
                                     ))}
                                 </GlassView>

@@ -16,7 +16,7 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-// import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -265,7 +265,7 @@ export default function BusinessProfileScreen() {
                                 style={styles.avatar}
                             />
                             <View style={styles.verifiedBadge}>
-                                {/* <MaterialIcons name="verified" size={12} color="white" /> */}
+                                <Icon name="verified" size={12} color="white" />
                             </View>
                         </View>
                         <View style={styles.profileInfo}>
@@ -278,7 +278,7 @@ export default function BusinessProfileScreen() {
                     {/* Personal Info */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            {/* <MaterialIcons name="person" size={20} color="#6366f1" /> */}
+                            <Icon name="person" size={20} color="#6366f1" />
                             <Text style={styles.sectionTitle}>PERSONAL INFO</Text>
                         </View>
 
@@ -327,7 +327,7 @@ export default function BusinessProfileScreen() {
                     {/* Business Details */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            {/* <MaterialIcons name="business" size={20} color="#6366f1" /> */}
+                            <Icon name="business" size={20} color="#6366f1" />
                             <Text style={styles.sectionTitle}>BUSINESS DETAILS</Text>
                         </View>
 
@@ -372,7 +372,7 @@ export default function BusinessProfileScreen() {
                     {/* Visiting Card */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            {/* <MaterialIcons name="contact-mail" size={20} color="#6366f1" /> */}
+                            <Icon name="contact-mail" size={20} color="#6366f1" />
                             <Text style={styles.sectionTitle}>VISITING CARD</Text>
                         </View>
 
@@ -390,13 +390,13 @@ export default function BusinessProfileScreen() {
                                                 <ActivityIndicator size="small" color="#6366f1" />
                                             ) : (
                                                 <>
-                                                    {/* <MaterialIcons name="swap-horiz" size={16} color="#6366f1" /> */}
+                                                    <Icon name="swap-horiz" size={16} color="#6366f1" />
                                                     <Text style={styles.changeCardText}>CHANGE</Text>
                                                 </>
                                             )}
                                         </TouchableOpacity>
                                         <TouchableOpacity style={styles.removeCardBtn} onPress={() => setVisitingCard(null)}>
-                                            {/* <MaterialIcons name="delete-outline" size={16} color="#f43f5e" /> */}
+                                            <Icon name="delete-outline" size={16} color="#f43f5e" />
                                             <Text style={[styles.changeCardText, { color: '#f43f5e' }]}>REMOVE</Text>
                                         </TouchableOpacity>
                                     </View>
@@ -413,7 +413,7 @@ export default function BusinessProfileScreen() {
                                     <ActivityIndicator size="large" color="#6366f1" />
                                 ) : (
                                     <>
-                                        {/* <MaterialIcons name="add-a-photo" size={40} color={editing ? '#6366f1' : '#cbd5e1'} /> */}
+                                        <Icon name="add-a-photo" size={40} color={editing ? '#6366f1' : '#cbd5e1'} />
                                         <Text style={[styles.uploadCardText, !editing && { color: '#cbd5e1' }]}>
                                             {editing ? 'TAP TO UPLOAD VISITING CARD' : 'NO VISITING CARD UPLOADED'}
                                         </Text>
@@ -427,7 +427,7 @@ export default function BusinessProfileScreen() {
                     {/* T-PIN Security */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            {/* <MaterialIcons name="lock" size={20} color="#6366f1" /> */}
+                            <Icon name="lock" size={20} color="#6366f1" />
                             <Text style={styles.sectionTitle}>T-PIN SECURITY</Text>
                         </View>
 
@@ -443,7 +443,7 @@ export default function BusinessProfileScreen() {
                                 style={[styles.detailIconContainer, { backgroundColor: 'rgba(99,102,241,0.1)' }]}
                                 onPress={() => openTpinModal(hasTpin ? 'change' : 'generate')}
                             >
-                                {/* <MaterialIcons name={hasTpin ? 'edit' : 'add'} size={20} color="#6366f1" /> */}
+                                <Icon name={hasTpin ? 'edit' : 'add'} size={20} color="#6366f1" />
                             </TouchableOpacity>
                         </GlassView>
 
@@ -464,15 +464,15 @@ export default function BusinessProfileScreen() {
                                 style={StyleSheet.absoluteFillObject}
                             />
                             <View style={styles.actionContent}>
-                                {/* <MaterialIcons name="receipt-long" size={24} color="white" /> */}
+                                <Icon name="receipt-long" size={24} color="white" />
                                 <Text style={styles.actionText}>View Order History</Text>
                             </View>
-                            {/* <MaterialIcons name="arrow-forward-ios" size={16} color="white" /> */}
+                            <Icon name="arrow-forward-ios" size={16} color="white" />
                         </TouchableOpacity>
 
                         <TouchableOpacity style={[styles.historyButton, { marginTop: 16 }]} onPress={handleLogout}>
                             <View style={styles.historyButtonContent}>
-                                {/* <MaterialIcons name="logout" size={24} color="#f43f5e" /> */}
+                                <Icon name="logout" size={24} color="#f43f5e" />
                                 <Text style={[styles.historyButtonText, { color: '#f43f5e' }]}>Log Out</Text>
                             </View>
                         </TouchableOpacity>
@@ -492,11 +492,11 @@ export default function BusinessProfileScreen() {
                 <View style={tpinProfileStyles.overlay}>
                     <GlassView blurType="dark" blurAmount={40} style={tpinProfileStyles.card}>
                         <TouchableOpacity style={tpinProfileStyles.closeBtn} onPress={() => setShowTpinProfileModal(false)}>
-                            {/* <MaterialIcons name="close" size={24} color="#94a3b8" /> */}
+                            <Icon name="close" size={24} color="#94a3b8" />
                         </TouchableOpacity>
 
                         <View style={tpinProfileStyles.iconCircle}>
-                            {/* <MaterialIcons name="vpn-key" size={32} color="#6366f1" /> */}
+                            <Icon name="vpn-key" size={32} color="#6366f1" />
                         </View>
 
                         <Text style={tpinProfileStyles.title}>
@@ -556,7 +556,7 @@ export default function BusinessProfileScreen() {
 
                         {!!tpinError && (
                             <View style={tpinProfileStyles.errorRow}>
-                                {/* <MaterialIcons name="error-outline" size={16} color="#ef4444" /> */}
+                                <Icon name="error-outline" size={16} color="#ef4444" />
                                 <Text style={tpinProfileStyles.errorText}>{tpinError}</Text>
                             </View>
                         )}
@@ -637,7 +637,7 @@ function FieldItem({
                 )}
             </View>
             <View style={styles.detailIconContainer}>
-                {/* <MaterialIcons name={icon as any} size={20} color="#6366f1" /> */}
+                <Icon name={icon as any} size={20} color="#6366f1" />
             </View>
         </GlassView>
     );
