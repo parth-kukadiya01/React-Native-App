@@ -1,0 +1,62 @@
+// API Configuration Constants
+import { Platform } from 'react-native';
+
+// Base URL for the backend server
+export const BASE_URL = 'http://192.168.1.14:5001';
+
+// Base API URL - configures based on platform
+// Using LAN IP for all physical devices (iOS & Android) to ensure connectivity
+export const API_BASE_URL = `${BASE_URL}/api/v1`;
+
+// Health check endpoint
+export const API_HEALTH_URL = `${BASE_URL}/health`;
+
+// Helper to construct full image URL
+export const getImageUrl = (path: string | undefined | null) => {
+    if (!path) return 'https://via.placeholder.com/400';
+    if (path.startsWith('http')) {
+        // If it's a localhost URL on a physical device, replace with LAN IP
+        return path.replace('http://localhost:5001', BASE_URL).replace('http://127.0.0.1:5001', BASE_URL);
+    }
+    return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
+// API Endpoints
+export const API_ENDPOINTS = {
+    AUTH: {
+        LOGIN: '/auth/login',
+        REGISTER: '/auth/register',
+        LOGOUT: '/auth/logout',
+    },
+    PRODUCTS: {
+        BASE: '/products',
+        NEW_ARRIVALS: '/products/new-arrivals',
+        SEARCH: '/products/search',
+        DETAILS: (id: string) => `/products/${id}`,
+    },
+    CATEGORIES: {
+        BASE: '/categories',
+    },
+    CART: {
+        BASE: '/cart',
+    },
+    FAVORITES: {
+        BASE: '/favorites',
+    },
+    ORDERS: {
+        BASE: '/orders',
+        DETAILS: (id: string) => `/orders/${id}`,
+    },
+    NOTIFICATIONS: {
+        BASE: '/notifications',
+    },
+    USER: {
+        PROFILE: '/users/profile',
+    },
+    TPIN: {
+        GENERATE: '/tpin/generate',
+        VERIFY: '/tpin/verify',
+        STATUS: '/tpin/status',
+        UPDATE: '/tpin/update',
+    },
+};
