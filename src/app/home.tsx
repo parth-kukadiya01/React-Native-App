@@ -8,6 +8,8 @@ import {
     TouchableOpacity,
     Platform,
     FlatList,
+    ActivityIndicator,
+    Alert,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
@@ -74,8 +76,10 @@ export default function HomeScreen() {
                 if (bannersRes.status === 'fulfilled') {
                     setBanners(bannersRes.value?.data?.data || []);
                 }
-            } catch (error) {
-                // Silently handle — API interceptor handles auth redirects
+            } catch (error: any) {
+                console.error('Home data fetch error:', error);
+                const msg = error.response?.data?.message || 'Failed to load home data';
+                Alert.alert('Error', msg);
             } finally {
                 setLoading(false);
             }
@@ -147,7 +151,7 @@ export default function HomeScreen() {
             );
         } catch (error: any) {
             // Handle "already in favorites" case gracefully (400 or specific message)
-            const isAlreadyFav = error?.response?.status === 400 || error?.response?.data?.error === 'Product already in favorites';
+            const isAlreadyFav = error?.response?.status === 400 || error?.response?.data?.message === 'Product already in favorites';
             if (isAlreadyFav) {
                 // Ensure it's marked as favorite in both lists
                 setNewArrivals(current =>
@@ -160,6 +164,9 @@ export default function HomeScreen() {
                         (p._id || p.id) === id ? { ...p, isFavorite: true } : p
                     )
                 );
+            } else {
+                const msg = error.response?.data?.message || 'Failed to update favorite';
+                Alert.alert('Error', msg);
             }
         }
     };
@@ -204,7 +211,7 @@ export default function HomeScreen() {
             </GlassView>
 
             <ScrollView
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 92 }]}
                 showsVerticalScrollIndicator={false}
             >
 
@@ -298,7 +305,7 @@ export default function HomeScreen() {
                             <TouchableOpacity
                                 key={cat._id}
                                 style={[styles.categoryPill, activeCategory === cat._id && styles.activeCategoryPill]}
-                                onPress={() => navigation.navigate('catalog' as any, { categoryId: cat._id, categoryName: cat.name })}
+                                onPress={() => navigation.navigate('catalog' as any, { categoryId: cat._id, categoryName: cat.name, timestamp: Date.now() })}
                             >
                                 <View style={[styles.categoryIconContainer, activeCategory === cat._id && styles.activeCategoryIconContainer]}>
                                     <Icon
@@ -322,7 +329,7 @@ export default function HomeScreen() {
                             <Text style={styles.newArrivalsTitle}>New Arrivals</Text>
                             <View style={styles.newArrivalsUnderline} />
                         </View>
-                        <TouchableOpacity style={styles.seeAllButton} onPress={() => navigation.navigate('catalog' as any)}>
+                        <TouchableOpacity style={styles.seeAllButton} onPress={() => navigation.navigate('catalog' as any, { categoryId: null, categoryName: 'All', timestamp: Date.now() })}>
                             <Text style={styles.seeAllText}>SEE ALL</Text>
                         </TouchableOpacity>
                     </View>
@@ -393,7 +400,7 @@ export default function HomeScreen() {
                                 <Text style={styles.newArrivalsTitle}>Recently Viewed</Text>
                                 <View style={[styles.newArrivalsUnderline, { backgroundColor: '#f59e0b' }]} />
                             </View>
-                            <TouchableOpacity style={styles.seeAllButton} onPress={() => navigation.navigate('catalog' as any)}>
+                            <TouchableOpacity style={styles.seeAllButton} onPress={() => navigation.navigate('catalog' as any, { categoryId: null, categoryName: 'All', timestamp: Date.now() })}>
                                 <Text style={styles.seeAllText}>SEE ALL</Text>
                             </TouchableOpacity>
                         </View>

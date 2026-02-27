@@ -1,9 +1,11 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import SplashScreen from 'react-native-splash-screen';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { Provider } from 'react-redux';
+import { enableSecureView, disableSecureView, forbidAndroidShare, allowAndroidShare } from 'react-native-prevent-screenshot-ios-android';
+// import SplashScreen from 'react-native-splash-screen';
 // import { ErrorBoundary } from 'react-error-boundary';
 
 import { CartProvider } from './src/context/CartContext';
@@ -11,13 +13,16 @@ import { setOnUnauthorizedCallback } from './src/services/api';
 import { storage } from './src/services/storage';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import AppNavigator, { navigationRef } from './src/navigation/AppNavigator';
+import SplashScreen from './src/app/SplashScreen';
+import MainNavigation from './src/navigation/MainNavigator';
+import { store } from './src/store';
 
 function ErrorFallback({ resetErrorBoundary }: any) {
     const handleReset = async () => {
         try {
             await storage.deleteItem('userToken');
             await storage.deleteItem('userData');
-        } catch (e) {}
+        } catch (e) { }
         resetErrorBoundary();
     };
 
@@ -42,7 +47,21 @@ function AppContent() {
     // usePushNotifications();
 
     useEffect(() => {
-        SplashScreen.hide();
+        if (Platform.OS === 'android') {
+            forbidAndroidShare();
+        }
+        if (Platform.OS === 'ios') {
+            enableSecureView();
+        }
+
+        return () => {
+            if (Platform.OS === 'android') {
+                allowAndroidShare();
+            }
+            if (Platform.OS === 'ios') {
+                disableSecureView();
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -56,7 +75,7 @@ function AppContent() {
         });
     }, []);
 
-    return <AppNavigator />;
+    return <MainNavigation />;
 }
 
 export default function App() {
@@ -65,8 +84,9 @@ export default function App() {
     // }, []);
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            {/* <ErrorBoundary
+        <Provider store={store}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                {/* <ErrorBoundary
                 FallbackComponent={ErrorFallback}
                 onError={handleError}
             > */}
@@ -77,8 +97,9 @@ export default function App() {
                         </NavigationContainer>
                     </CartProvider>
                 </SafeAreaProvider>
-            {/* </ErrorBoundary> */}
-        </GestureHandlerRootView>
+                {/* </ErrorBoundary> */}
+            </GestureHandlerRootView>
+        </Provider>
     );
 }
 

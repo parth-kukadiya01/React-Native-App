@@ -6,19 +6,36 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
+import { useState, useEffect } from 'react';
+import api from '../services/api';
 
 interface BottomNavProps {
-    activeTab: 'Home' | 'Catalog' | 'Orders' | 'Account' | 'Saved' | 'Profile';
+    activeTab: 'Home' | 'Catalog' | 'Orders' | 'Account' | 'Saved' | 'Profile' | 'Notifications';
 }
 
 const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const insets = useSafeAreaInsets();
     const { cartCount } = useCart();
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        const fetchUnread = async () => {
+            try {
+                const res = await api.get('/notifications');
+                const count = res.data?.data?.notifications?.filter((n: any) => !n.isRead).length || 0;
+                setUnreadCount(count);
+            } catch (error) {
+                console.log('Failed to fetch unread notifications');
+            }
+        };
+        fetchUnread();
+    }, []);
 
     const navItems = [
         { id: 'Home', icon: 'home', label: 'HOME', route: '/home' },
         { id: 'Catalog', icon: 'grid-view', label: 'CATALOG', route: '/catalog' },
+        // { id: 'Notifications', icon: 'notifications-none', label: 'ALERTS', route: '/notifications' },
         { id: 'Saved', icon: 'favorite-border', label: 'SAVED', route: '/favorites' },
         { id: 'Orders', icon: 'shopping-cart', label: 'ORDERS', route: '/cart' },
         { id: 'Account', icon: 'account-circle', label: 'ACCOUNT', route: '/profile' },
@@ -39,17 +56,28 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
                 <TouchableOpacity
                     key={item.id}
                     style={styles.navItem}
-                    onPress={() => navigation.navigate(item.route.replace('/', '') as any)}
+                    onPress={() => {
+                        if (item.id === 'Catalog') {
+                            navigation.navigate('catalog' as any, { categoryId: null, categoryName: 'All', timestamp: Date.now() });
+                        } else {
+                            navigation.navigate(item.route.replace('/', '') as any);
+                        }
+                    }}
                 >
                     <View>
                         <Icon
                             name={item.icon as any}
-                            size={26}
+                            size={24}
                             color={isActive(item.id) ? '#4A90E2' : '#94a3b8'}
                         />
                         {item.id === 'Orders' && cartCount > 0 && (
                             <View style={styles.badgeCount}>
                                 <Text style={styles.badgeText}>{cartCount}</Text>
+                            </View>
+                        )}
+                        {item.id === 'Notifications' && unreadCount > 0 && (
+                            <View style={[styles.badgeCount, { backgroundColor: '#ef4444' }]}>
+                                <Text style={styles.badgeText}>{unreadCount}</Text>
                             </View>
                         )}
                     </View>
@@ -70,7 +98,7 @@ const styles = StyleSheet.create({
         right: 0,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: 32,
+        paddingHorizontal: 16,
         paddingTop: 16,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,

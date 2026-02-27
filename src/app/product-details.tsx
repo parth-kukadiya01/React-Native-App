@@ -28,9 +28,39 @@ import ImageView from "react-native-image-viewing";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const MATERIALS = ['Yellow', 'Rose', 'White'];
+const MATERIALS = ['Yellow Gold', 'Rose Gold', 'White Gold'];
 const PURITY = ['14k', '18k', '22k'];
-const SIZES = ['6', '6.5', '7', '7.5', '8'];
+
+const getDynamicSizes = (productName: string = ''): string[] => {
+    const name = productName.toLowerCase();
+
+    if (name.includes('bracelet') || name.includes('breslet') || name.includes('bangle') || name.includes('bangal')) {
+        return ['6.5', '7', '7.5', '8'];
+    }
+    if (name.includes('necklace') || name.includes('nackless')) {
+        return ['110', '111', '112', '113', '114', '115'];
+    }
+    if (name.includes('pendant') || name.includes('earring') || name.includes('pandal')) {
+        return []; // No size for pendants or earrings
+    }
+    if (name.includes('chain')) {
+        return ['18', '19', '20'];
+    }
+    if (name.includes('kadali')) {
+        return ['2.2', '2.4', '2.6', '2.8', '2.10', '2.12', '2.14'];
+    }
+    // Default (Ring)
+    return Array.from({ length: 34 }, (_, i) => (i + 3).toString());
+};
+
+const getDynamicSizeLabel = (productName: string = ''): string => {
+    const name = productName.toLowerCase();
+    if (name.includes('bracelet') || name.includes('breslet') || name.includes('bangle') || name.includes('bangal')) return 'BRACELET SIZE';
+    if (name.includes('necklace') || name.includes('nackless')) return 'NECKLACE SIZE';
+    if (name.includes('chain')) return 'CHAIN SIZE';
+    if (name.includes('kadali')) return 'KADALI SIZE';
+    return 'RING SIZE';
+};
 
 export default function ProductDetailsScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -58,14 +88,24 @@ export default function ProductDetailsScreen() {
                 const res = await productService.getProductDetails(id as string);
                 const data = res.data.data;
                 setProduct(data);
-                setSelectedMaterial(data.materials?.[0] || 'Gold');
+                // Try to infer string fallback from data, otherwise use standard 'Yellow Gold'
+                let defaultMat = 'Yellow Gold';
+                if (data.materials?.[0]) {
+                    const matStr = data.materials[0].toLowerCase();
+                    if (matStr.includes('rose')) defaultMat = 'Rose Gold';
+                    else if (matStr.includes('white')) defaultMat = 'White Gold';
+                }
+                setSelectedMaterial(defaultMat);
                 setSelectedPurity(data.availablePurity?.[0] || '18k');
-                setSelectedSize(data.availableSizes?.[0] || '');
+                const dynamicSizes = getDynamicSizes(data?.name || name);
+                setSelectedSize(data.availableSizes?.[0] || dynamicSizes[0] || '');
                 setLoading(false);
                 // Track this product view
                 recentlyViewedService.trackView(id as string).catch(() => { });
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Error fetching product details:', error);
+                const msg = error.response?.data?.message || 'Failed to load product details';
+                Alert.alert('Error', msg);
                 setLoading(false);
             }
         };
@@ -134,9 +174,11 @@ export default function ProductDetailsScreen() {
                                 <ScrollView
                                     horizontal
                                     pagingEnabled
+                                    snapToInterval={SCREEN_WIDTH - 64} // W - (24*2 container padding) - (8*2 wrapper padding)
+                                    decelerationRate="fast"
                                     showsHorizontalScrollIndicator={false}
                                     onMomentumScrollEnd={(e) => {
-                                        const newIndex = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 32)); // 32 is padding
+                                        const newIndex = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 64));
                                         setActiveImageIndex(newIndex);
                                     }}
                                     contentContainerStyle={{ alignItems: 'center' }}
@@ -146,7 +188,7 @@ export default function ProductDetailsScreen() {
                                             key={index}
                                             activeOpacity={0.9}
                                             onPress={() => setIsVisible(true)}
-                                            style={{ width: SCREEN_WIDTH - 48, height: SCREEN_WIDTH - 48, alignItems: 'center', justifyContent: 'center' }} // 48 = padding 16*2 + extra for card padding
+                                            style={{ width: SCREEN_WIDTH - 64, height: SCREEN_WIDTH - 64, alignItems: 'center', justifyContent: 'center' }}
                                         >
                                             <Image
                                                 source={{ uri: getImageUrl(img) }}
@@ -196,7 +238,7 @@ export default function ProductDetailsScreen() {
                                 <View style={styles.stockBadge}>
                                     <Text style={styles.stockText}>{product?.stockStatus || 'IN STOCK'}</Text>
                                 </View>
-                                <Text style={styles.skuText}>REF: {product?.sku || ref}</Text>
+                                {product?.sku || ref ? <Text style={styles.skuText}>REF: {product?.sku || ref}</Text> : null}
                             </View>
                             <Text style={styles.productTitle}>{product?.name || name}</Text>
                         </View>
@@ -252,7 +294,7 @@ export default function ProductDetailsScreen() {
                             <GlassView blurType="light" blurAmount={30} style={styles.selectorCard}>
                                 <Text style={styles.selectorLabel}>MATERIAL</Text>
                                 <View style={styles.selectorRow}>
-                                    {(product?.materials && product.materials.length > 0 ? product.materials : MATERIALS).map((material: string) => (
+                                    {MATERIALS.map((material: string) => (
                                         <TouchableOpacity
                                             key={material}
                                             style={[styles.selectorButton, selectedMaterial === material && styles.selectorButtonActive]}
@@ -284,28 +326,40 @@ export default function ProductDetailsScreen() {
                                 </View>
                             </GlassView>
 
-                            {/* Ring Size */}
-                            <GlassView blurType="light" blurAmount={30} style={styles.selectorCard}>
-                                <View style={styles.sizeHeader}>
-                                    <Text style={styles.selectorLabel}>RING SIZE</Text>
-                                    <TouchableOpacity>
-                                        <Text style={styles.sizeGuideText}>SIZE GUIDE</Text>
-                                    </TouchableOpacity>
-                                </View>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sizeScroll}>
-                                    {(product?.availableSizes && product.availableSizes.length > 0 ? product.availableSizes : SIZES).map((size: string) => (
-                                        <TouchableOpacity
-                                            key={size}
-                                            style={[styles.sizeButton, selectedSize === size && styles.selectorButtonActive]}
-                                            onPress={() => setSelectedSize(size)}
-                                        >
-                                            <Text style={[styles.selectorButtonText, selectedSize === size && styles.selectorButtonTextActive]}>
-                                                {size}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </GlassView>
+                            {/* Size */}
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sizeScroll}>
+                                {(() => {
+                                    const availableSizes = product?.availableSizes && product.availableSizes.length > 0 ? product.availableSizes : getDynamicSizes(product?.name || name);
+
+                                    if (!availableSizes || availableSizes.length === 0) {
+                                        return null; // Don't render sizes if there are none (like earrings/pendants)
+                                    }
+
+                                    return (
+                                        <GlassView blurType="light" blurAmount={30} style={[styles.selectorCard, { width: '100%' }]}>
+                                            <View style={styles.sizeHeader}>
+                                                <Text style={styles.selectorLabel}>{getDynamicSizeLabel(product?.name || name)}</Text>
+                                                <TouchableOpacity>
+                                                    <Text style={styles.sizeGuideText}>SIZE GUIDE</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sizeScroll}>
+                                                {availableSizes.map((size: string) => (
+                                                    <TouchableOpacity
+                                                        key={size}
+                                                        style={[styles.sizeButton, selectedSize === size && styles.selectorButtonActive]}
+                                                        onPress={() => setSelectedSize(size)}
+                                                    >
+                                                        <Text style={[styles.selectorButtonText, selectedSize === size && styles.selectorButtonTextActive]}>
+                                                            {size}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        </GlassView>
+                                    );
+                                })()}
+                            </ScrollView>
                         </View>
 
                     </ScrollView>
@@ -406,7 +460,7 @@ const styles = StyleSheet.create({
         paddingTop: 16,
     },
     imageContainer: {
-        paddingHorizontal: 16,
+        paddingHorizontal: 24, // Matched with other sections
         marginBottom: 32,
     },
     imageWrapper: {
@@ -583,6 +637,7 @@ const styles = StyleSheet.create({
     },
     detailsSection: {
         paddingHorizontal: 24,
+        marginBottom: 32, // Added spacing between details and selectors
     },
     detailsCard: {
         borderRadius: 32, // 3xl

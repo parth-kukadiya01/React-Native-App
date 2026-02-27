@@ -20,6 +20,22 @@ export const authService = {
     },
 
     logout: async (): Promise<void> => {
+        try {
+            const token = await storage.getItem('userToken');
+            if (token) {
+                // Assuming we also have fcmToken stored, or we just remove by FCM token?
+                // Wait, removePushToken takes the expo push token (FCM token). We need to get it from storage if saved, or use messaging().getToken().
+                // Since this is authService, requiring messaging might be tricky. Let's import messaging and delete.
+                const messaging = require('@react-native-firebase/messaging').default;
+                const fcmToken = await messaging().getToken();
+                if (fcmToken) {
+                    const { notificationService } = require('./notificationService');
+                    await notificationService.removePushToken(fcmToken);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to remove push token on logout', e);
+        }
         await storage.deleteItem('userToken');
         await storage.deleteItem('userData');
     },

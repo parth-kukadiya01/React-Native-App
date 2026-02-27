@@ -15,57 +15,46 @@ import {
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from '../components/Icon';
 import { Colors } from '../constants/Colors';
 
-import { authService } from '../services/authService';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { loginUser, clearAuthError } from '../store/slices/authSlice';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export default function LoginScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
+
+    const dispatch = useAppDispatch();
+    const { isAuthenticating, error } = useAppSelector((state) => state.auth);
+
     const colorScheme = useColorScheme();
     const isDark = colorScheme === 'dark';
     const theme = isDark ? Colors.dark : Colors.light;
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [rememberSession, setRememberSession] = useState(false);
 
+    // Show any Redux error as an Alert then clear it
     React.useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                if (await authService.isAuthenticated()) {
-                    navigation.reset({ index: 0, routes: [{ name: 'home' }] });
-                }
-            } catch (error) {
-                console.error('Auth check failed:', error);
-                // Optionally clear storage if auth check fails hard
-            }
-        };
-        checkAuth();
-    }, []);
+        if (error) {
+            Alert.alert('Login Failed', error);
+            dispatch(clearAuthError());
+        }
+    }, [error]);
 
     const handleLogin = async () => {
         if (!email || !password) {
             Alert.alert('Error', 'Please enter both ID/Mobile and Password');
             return;
         }
-
-        setLoading(true);
-
-        try {
-            await authService.login(email, password);
-            setLoading(false);
-            navigation.reset({ index: 0, routes: [{ name: 'home' }] });
-        } catch (error: any) {
-            setLoading(false);
-            const message = error.response?.data?.message || 'Invalid credentials';
-            Alert.alert('Login Failed', message);
-        }
+        dispatch(loginUser({ email, password }));
+        // Routing is handled automatically by MainNavigator watching auth.token
     };
+
 
     return (
         <View style={[styles.container, { backgroundColor: isDark ? '#0f0a0f' : '#fff' }]}>
@@ -148,6 +137,8 @@ export default function LoginScreen() {
                                                     backgroundColor: theme.inputBg,
                                                     borderColor: theme.border,
                                                     color: theme.text,
+                                                    paddingLeft: 46,
+                                                    paddingRight: 16,
                                                 },
                                             ]}
                                             placeholder="Enter Email, Phone, or User ID"
@@ -174,6 +165,8 @@ export default function LoginScreen() {
                                                     backgroundColor: theme.inputBg,
                                                     borderColor: theme.border,
                                                     color: theme.text,
+                                                    paddingLeft: 46,
+                                                    paddingRight: 46,
                                                 },
                                             ]}
                                             placeholder="Min 6 characters"
@@ -186,7 +179,7 @@ export default function LoginScreen() {
                                             style={styles.eyeIcon}
                                             onPress={() => setShowPassword(!showPassword)}
                                         >
-                                            <Icon name="visibility" size={24} color="#9ca3af" />
+                                            <Icon name={showPassword ? "visibility" : "visibility-off"} size={24} color="#9ca3af" />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -246,9 +239,9 @@ export default function LoginScreen() {
                                             { backgroundColor: Colors.light.primary },
                                         ]}
                                         onPress={handleLogin}
-                                        disabled={loading}
+                                        disabled={isAuthenticating}
                                     >
-                                        {loading ? (
+                                        {isAuthenticating ? (
                                             <ActivityIndicator color="white" />
                                         ) : (
                                             <>
@@ -418,7 +411,6 @@ const styles = StyleSheet.create({
         flex: 1,
         borderRadius: 12,
         borderWidth: 1,
-        paddingHorizontal: 12,
         fontSize: 14,
         fontWeight: '500',
     },

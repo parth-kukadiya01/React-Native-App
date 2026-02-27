@@ -29,9 +29,12 @@ import ScreenHeader from '../components/ScreenHeader';
 import BottomNav from '../components/BottomNav';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { tpinService } from '../services/tpinService';
+import { useAppDispatch } from '../store/hooks';
+import { logoutUser } from '../store/slices/authSlice';
 
 export default function BusinessProfileScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
+    const dispatch = useAppDispatch();
     const insets = useSafeAreaInsets();
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -139,12 +142,8 @@ export default function BusinessProfileScreen() {
     };
 
     const handleLogout = async () => {
-        try {
-            await authService.logout();
-        } catch (e) {
-            // ignore
-        }
-        navigation.reset({ index: 0, routes: [{ name: 'index' as any }] });
+        dispatch(logoutUser());
+        // MainNavigator will automatically route to AuthNavigator when token becomes null
     };
 
     // T-PIN state
@@ -189,7 +188,7 @@ export default function BusinessProfileScreen() {
                 setShowTpinProfileModal(false);
                 Alert.alert('Success', 'T-PIN created successfully!');
             } catch (error: any) {
-                setTpinError(error.response?.data?.error || 'Failed to create T-PIN');
+                setTpinError(error.response?.data?.message || 'Failed to create T-PIN');
             } finally {
                 setTpinLoading(false);
             }
@@ -204,7 +203,7 @@ export default function BusinessProfileScreen() {
             setShowTpinProfileModal(false);
             Alert.alert('Success', 'T-PIN updated successfully!');
         } catch (error: any) {
-            setTpinError(error.response?.data?.error || 'Failed to update T-PIN');
+            setTpinError(error.response?.data?.message || 'Failed to update T-PIN');
         } finally {
             setTpinLoading(false);
         }

@@ -2,7 +2,7 @@
 import { Platform } from 'react-native';
 
 // Base URL for the backend server
-export const BASE_URL = 'http://192.168.1.14:5001';
+export const BASE_URL = 'http://192.168.1.4:5001';
 
 // Base API URL - configures based on platform
 // Using LAN IP for all physical devices (iOS & Android) to ensure connectivity

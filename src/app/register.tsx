@@ -24,6 +24,7 @@ import { authService } from '../services/authService';
 export default function RegisterScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // Form State
@@ -34,6 +35,7 @@ export default function RegisterScreen() {
         phone: '',
         taxId: '',
         password: '',
+        repassword: '',
     });
 
     const handleChange = (key: string, value: string) => {
@@ -41,8 +43,13 @@ export default function RegisterScreen() {
     };
 
     const handleRegister = async () => {
-        if (!formData.fullName || !formData.email || !formData.password || !formData.companyName) {
+        if (!formData.fullName || !formData.email || !formData.password || !formData.companyName || !formData.repassword) {
             Alert.alert('Missing Information', 'Please fill in all required fields');
+            return;
+        }
+
+        if (formData.password !== formData.repassword) {
+            Alert.alert('Validation Error', 'Password and Confirm Password do not match');
             return;
         }
 
@@ -66,7 +73,7 @@ export default function RegisterScreen() {
             );
         } catch (error: any) {
             setLoading(false);
-            const message = error.response?.data?.error || error.response?.data?.message || 'Registration failed. Please try again.';
+            const message = error.response?.data?.message || 'Registration failed. Please try again.';
             Alert.alert('Registration Error', message);
         }
     };
@@ -195,7 +202,25 @@ export default function RegisterScreen() {
                                         onChangeText={(text) => handleChange('password', text)}
                                     />
                                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                                        <Icon name="visibility" size={20} color="#94a3b8" />
+                                        <Icon name={showPassword ? "visibility" : "visibility-off"} size={20} color="#94a3b8" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Confirm Password</Text>
+                                <View style={styles.inputContainer}>
+                                    <Icon name="lock" size={20} color="#94a3b8" style={styles.inputIcon} />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="••••••••"
+                                        placeholderTextColor="#cbd5e1"
+                                        secureTextEntry={!showConfirmPassword}
+                                        value={formData.repassword}
+                                        onChangeText={(text) => handleChange('repassword', text)}
+                                    />
+                                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                                        <Icon name={showConfirmPassword ? "visibility" : "visibility-off"} size={20} color="#94a3b8" />
                                     </TouchableOpacity>
                                 </View>
                             </View>

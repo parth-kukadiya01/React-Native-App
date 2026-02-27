@@ -163,7 +163,7 @@ export default function CartScreen() {
             setTpinError('');
             Alert.alert('Success', 'T-PIN created! Now enter your T-PIN to place the order.');
         } catch (error: any) {
-            const msg = error.response?.data?.error || 'Failed to create T-PIN';
+            const msg = error.response?.data?.message || 'Failed to create T-PIN';
             setTpinError(msg);
         } finally {
             setTpinLoading(false);
@@ -206,7 +206,7 @@ export default function CartScreen() {
                 );
             }
         } catch (error: any) {
-            const msg = error.response?.data?.error || 'Failed to place order. Please try again.';
+            const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
             setTpinError(msg);
         } finally {
             setTpinLoading(false);

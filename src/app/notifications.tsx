@@ -6,7 +6,8 @@ import {
     ScrollView,
     TouchableOpacity,
     RefreshControl,
-    ActivityIndicator
+    ActivityIndicator,
+    Alert
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import GlassView from '../components/GlassView';
@@ -36,8 +37,12 @@ export default function NotificationsScreen() {
         try {
             const response = await api.get('/notifications');
             setNotifications(response.data.data.notifications);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching notifications:', error);
+            const msg = error.response?.data?.message || 'Failed to load notifications';
+            // Optional: Alert.alert('Error', msg); 
+            // Notifications often fail silently or show a Toast, but "show msg" implies user feedback.
+            Alert.alert('Error', msg);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -59,8 +64,10 @@ export default function NotificationsScreen() {
             setNotifications(prev =>
                 prev.map(n => n._id === id ? { ...n, isRead: true } : n)
             );
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error marking as read:', error);
+            const msg = error.response?.data?.message || 'Failed to update notification';
+            Alert.alert('Error', msg);
         }
     };
 

@@ -36,6 +36,7 @@ interface Order {
     totalGrossWeight: number;
     createdAt: string;
     items: any[];
+    trackingId?: string;
 }
 
 export default function OrderHistoryScreen() {
@@ -53,8 +54,10 @@ export default function OrderHistoryScreen() {
             if (response.success) {
                 setOrders(response.data.orders);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to load orders', error);
+            const msg = error.response?.data?.message || 'Failed to load orders';
+            Alert.alert('Error', msg);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -99,9 +102,10 @@ export default function OrderHistoryScreen() {
             } else {
                 Alert.alert('Error', 'Failed to download invoice');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Invoice download error:', error);
-            Alert.alert('Error', 'Could not download invoice');
+            const msg = error.response?.data?.message || 'Could not download invoice';
+            Alert.alert('Error', msg);
         }
     };
 
@@ -261,7 +265,13 @@ export default function OrderHistoryScreen() {
                                     </View>
 
                                     {['SHIPMENT', 'SHIPPED', 'COMPLETED', 'DELIVERED'].includes(order.status) && (
-                                        <View style={{ marginTop: 16 }}>
+                                        <View style={{ marginTop: 16, gap: 12 }}>
+                                            {order.trackingId && (
+                                                <View style={[styles.invoiceButton, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
+                                                    <Icon name="local-shipping" size={20} color="#15803d" />
+                                                    <Text style={[styles.invoiceText, { color: '#15803d' }]}>Tracking ID: {order.trackingId}</Text>
+                                                </View>
+                                            )}
                                             <TouchableOpacity
                                                 style={styles.invoiceButton}
                                                 onPress={() => handleDownloadInvoice(order.orderId)}

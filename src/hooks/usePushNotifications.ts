@@ -58,11 +58,6 @@ export const usePushNotifications = () => {
             console.log('Foreground notification:', remoteMessage);
         });
 
-        // Background/quit state handler (set in index.ts)
-        messaging().setBackgroundMessageHandler(async remoteMessage => {
-            console.log('Background notification:', remoteMessage);
-        });
-
         return () => {
             unsubscribeForeground();
         };

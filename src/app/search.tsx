@@ -246,7 +246,7 @@ export default function SearchScreen() {
                 )
             );
         } catch (error: any) {
-            const msg = error?.response?.data?.error || 'Failed to update favorite';
+            const msg = error?.response?.data?.message || 'Failed to update favorite';
             if (error?.response?.status === 400 || msg === 'Product already in favorites') {
                 // If it's already a favorite (400), just ensure UI reflects that
                 setResults(current =>
@@ -263,6 +263,8 @@ export default function SearchScreen() {
                 );
             } else {
                 console.log('Favorite toggle error', error);
+                const msg = error.response?.data?.message || 'Failed to update favorite';
+                Alert.alert('Error', msg);
             }
         }
     };

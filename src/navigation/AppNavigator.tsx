@@ -39,10 +39,10 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 export default function AppNavigator() {
     return (
-        <Stack.Navigator initialRouteName='index' screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" component={LoginScreen} />
+        <Stack.Navigator initialRouteName='home' screenOptions={{ headerShown: false }}>
+            {/* <Stack.Screen name="index" component={LoginScreen} /> */}
             <Stack.Screen name="home" component={HomeScreen} />
-            <Stack.Screen name="register" component={RegisterScreen} />
+            {/* <Stack.Screen name="register" component={RegisterScreen} /> */}
             <Stack.Screen name="catalog" component={CatalogScreen} />
             <Stack.Screen name="search" component={SearchScreen} />
             <Stack.Screen name="favorites" component={FavoritesScreen} />
@@ -51,8 +51,8 @@ export default function AppNavigator() {
             <Stack.Screen name="orders" component={OrdersScreen} />
             <Stack.Screen name="profile" component={ProfileScreen} />
             <Stack.Screen name="notifications" component={NotificationsScreen} />
-            <Stack.Screen name="forgot-password" component={ForgotPasswordScreen} />
-            <Stack.Screen name="reset-password" component={ResetPasswordScreen} />
+            {/* <Stack.Screen name="forgot-password" component={ForgotPasswordScreen} />
+            <Stack.Screen name="reset-password" component={ResetPasswordScreen} /> */}
         </Stack.Navigator>
     );
 }

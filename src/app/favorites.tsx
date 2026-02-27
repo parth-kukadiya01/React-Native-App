@@ -44,8 +44,10 @@ export default function FavoritesScreen() {
             if (res.success) {
                 setFavorites(res.data || []);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching favorites:', error);
+            const msg = error.response?.data?.message || 'Failed to load favorites';
+            Alert.alert('Error', msg);
         } finally {
             setLoading(false);
         }
@@ -69,7 +71,8 @@ export default function FavoritesScreen() {
                 setFavorites(current => current.filter((item: any) => (item.id || item._id) !== id));
             } else {
                 console.error('Error removing favorite:', error);
-                Alert.alert('Error', 'Failed to remove from favorites');
+                const msg = error.response?.data?.message || 'Failed to remove from favorites';
+                Alert.alert('Error', msg);
             }
         }
     };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -34,7 +34,7 @@ export default function CatalogScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const route = useRoute<any>();
     const insets = useSafeAreaInsets();
-    const { categoryId, categoryName } = route.params || {};
+    const { categoryId, categoryName, timestamp } = route.params || {};
     const { width } = useResponsive();
     const CARD_WIDTH = (width - 48) / 2;
 
@@ -52,11 +52,50 @@ export default function CatalogScreen() {
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState('desc');
 
+    // Keep a ref to always have the latest route.params in our focusEffect callback
+    const routeParamsRef = useRef(route.params);
+    routeParamsRef.current = route.params;
+
+    // This ref lets us always call the latest fetchProducts from inside useFocusEffect
+    const sortRef = useRef({ sortBy, sortOrder });
+    sortRef.current = { sortBy, sortOrder };
+
+    const fetchProducts = useCallback(async (filterId: string | null) => {
+        try {
+            setLoading(true);
+            const params: any = { sortBy: sortRef.current.sortBy, sortOrder: sortRef.current.sortOrder };
+            if (filterId) {
+                params.category = filterId;
+            }
+            const res = await productService.getProducts(params);
+            const products = res.data.data.products || [];
+            setFilteredProducts(products);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            setFilteredProducts([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     useFocusEffect(
         useCallback(() => {
             updateCartCount();
-        }, [])
+            // Always read freshest params via ref — avoids stale closure
+            const params: any = routeParamsRef.current || {};
+            const catId: string | null = params.categoryId || null;
+            const catName: string = params.categoryName || 'All';
+            setActiveFilterId(catId);
+            setActiveFilter(catName);
+            fetchProducts(catId);
+        }, [fetchProducts])
     );
+
+    // Re-fetch when sort changes (user hits Refine)
+    useEffect(() => {
+        fetchProducts(activeFilterId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sortBy, sortOrder]);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -70,44 +109,15 @@ export default function CatalogScreen() {
         fetchCategories();
     }, []);
 
-    useEffect(() => {
-        if (categoryId) {
-            setActiveFilterId(categoryId as string);
-            setActiveFilter((categoryName as string) || 'All');
-        } else {
-            setActiveFilterId(null);
-            setActiveFilter('All');
-        }
-    }, [categoryId, categoryName]);
-
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                setLoading(true);
-                const params: any = { sortBy, sortOrder };
-                if (activeFilterId) {
-                    params.category = activeFilterId;
-                }
-                const res = await productService.getProducts(params);
-                const products = res.data.data.products || [];
-                setFilteredProducts(products);
-            } catch (error) {
-                console.error('Error fetching products:', error);
-                setFilteredProducts([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchProducts();
-    }, [activeFilterId, sortBy, sortOrder]);
-
     const handleFilterPress = (filterName: string, filterId: string | null) => {
         if (activeFilter === filterName) {
             setActiveFilter('All');
             setActiveFilterId(null);
+            fetchProducts(null);
         } else {
             setActiveFilter(filterName);
             setActiveFilterId(filterId);
+            fetchProducts(filterId);
         }
     };
 
@@ -128,7 +138,7 @@ export default function CatalogScreen() {
                 )
             );
         } catch (error: any) {
-            const msg = error?.response?.data?.error || 'Failed to update favorite';
+            const msg = error?.response?.data?.message || 'Failed to update favorite';
             // If already in favorites (400), just toggle the UI
             if (error?.response?.status === 400 || msg === 'Product already in favorites') {
                 setFilteredProducts(current =>
@@ -138,6 +148,9 @@ export default function CatalogScreen() {
                             : p
                     )
                 );
+            } else {
+                const msg = error.response?.data?.message || 'Failed to update favorite';
+                Alert.alert('Error', msg);
             }
         }
     };
@@ -154,8 +167,10 @@ export default function CatalogScreen() {
             const res = await productService.getProducts({ search: searchQuery });
             const products = res.data.data.products || [];
             setFilteredProducts(products);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error searching products:', error);
+            const msg = error.response?.data?.message || 'Search failed';
+            Alert.alert('Error', msg);
         } finally {
             setLoading(false);
         }
