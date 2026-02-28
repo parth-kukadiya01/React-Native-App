@@ -1,10 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Platform, PermissionsAndroid } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
+import { useSelector } from 'react-redux';
 import { notificationService } from '../services/notificationService';
+import type { RootState } from '../store';
 
 export const usePushNotifications = () => {
     const [fcmToken, setFcmToken] = useState<string | null>(null);
+
+    // Only send push token to backend when the user is authenticated
+    const authToken = useSelector((state: RootState) => state.auth.token);
 
     async function requestUserPermission() {
         if (Platform.OS === 'ios') {
@@ -43,14 +48,10 @@ export const usePushNotifications = () => {
         }
     }
 
+    // Get the device FCM token once on mount
     useEffect(() => {
         registerForPushNotificationsAsync().then(token => {
             setFcmToken(token);
-            if (token) {
-                notificationService.registerPushToken(token).catch(err => {
-                    console.log('Failed to register token with backend:', err);
-                });
-            }
         });
 
         // Foreground message handler
@@ -62,6 +63,16 @@ export const usePushNotifications = () => {
             unsubscribeForeground();
         };
     }, []);
+
+    // Register token with backend ONLY when user is logged in.
+    // Re-runs automatically after login (authToken changes from null → value).
+    useEffect(() => {
+        if (!authToken || !fcmToken) return;
+
+        notificationService.registerPushToken(fcmToken).catch(err => {
+            console.log('Failed to register token with backend:', err);
+        });
+    }, [authToken, fcmToken]);
 
     return {
         fcmToken,

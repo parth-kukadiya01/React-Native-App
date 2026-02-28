@@ -110,11 +110,7 @@ export default function CatalogScreen() {
     }, []);
 
     const handleFilterPress = (filterName: string, filterId: string | null) => {
-        if (activeFilter === filterName) {
-            setActiveFilter('All');
-            setActiveFilterId(null);
-            fetchProducts(null);
-        } else {
+        if (activeFilter !== filterName) {
             setActiveFilter(filterName);
             setActiveFilterId(filterId);
             fetchProducts(filterId);

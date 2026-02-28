@@ -43,6 +43,7 @@ export const hydrateAuth = createAsyncThunk('auth/hydrate', async () => {
     const token = await storage.getItem('userToken');
     const userStr = await storage.getItem('userData');
     const user: AuthUser | null = userStr ? JSON.parse(userStr) : null;
+    await new Promise<void>((resolve) => setTimeout(resolve, 1500));
     return { token, user };
 });
 

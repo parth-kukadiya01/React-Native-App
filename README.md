@@ -98,3 +98,8 @@ To learn more about React Native, take a look at the following resources:
 
 
 cd android && ./gradlew clean && cd ..
+
+
+Uninstall old version: adb uninstall com.svgold
+
+Install new version: adb install android/app/build/outputs/apk/release/app-arm64-v8a-release.apk

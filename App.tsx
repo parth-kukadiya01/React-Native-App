@@ -44,7 +44,6 @@ function ErrorFallback({ resetErrorBoundary }: any) {
 }
 
 function AppContent() {
-    // usePushNotifications();
 
     useEffect(() => {
         if (Platform.OS === 'android') {
