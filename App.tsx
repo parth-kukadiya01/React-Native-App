@@ -4,7 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Provider } from 'react-redux';
-import { enableSecureView, disableSecureView, forbidAndroidShare, allowAndroidShare } from 'react-native-prevent-screenshot-ios-android';
+import RNScreenshotPrevent from 'react-native-screenshot-prevent';
 // import SplashScreen from 'react-native-splash-screen';
 // import { ErrorBoundary } from 'react-error-boundary';
 
@@ -47,18 +47,18 @@ function AppContent() {
 
     useEffect(() => {
         if (Platform.OS === 'android') {
-            forbidAndroidShare();
+            RNScreenshotPrevent.enabled(true);
         }
         if (Platform.OS === 'ios') {
-            enableSecureView();
+            if (!__DEV__) RNScreenshotPrevent.enableSecureView();
         }
 
         return () => {
             if (Platform.OS === 'android') {
-                allowAndroidShare();
+                RNScreenshotPrevent.enabled(false);
             }
             if (Platform.OS === 'ios') {
-                disableSecureView();
+                if (!__DEV__) RNScreenshotPrevent.disableSecureView();
             }
         };
     }, []);

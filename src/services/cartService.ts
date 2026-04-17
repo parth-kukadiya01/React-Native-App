@@ -11,9 +11,9 @@ export const cartService = {
         }
     },
 
-    addToCart: async (productId: string, quantity: number = 1): Promise<any> => {
+    addToCart: async (productId: string, quantity: number = 1, options?: { note?: string; size?: string; material?: string; purity?: string }): Promise<any> => {
         try {
-            const response = await api.post('/cart', { productId, quantity });
+            const response = await api.post('/cart', { productId, quantity, ...options });
             return response.data;
         } catch (error) {
             console.error('Error adding to cart:', error);

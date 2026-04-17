@@ -7,16 +7,19 @@ import {
     TouchableOpacity,
     RefreshControl,
     ActivityIndicator,
-    Alert
+    Alert,
+    StatusBar
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
-import GlassView from '../components/GlassView';
-import { StatusBar } from 'react-native';
 import Icon from '../components/Icon';
-import { Colors } from '../constants/Colors';
+import MessageModal from '../components/MessageModal';
+import { useNavigation } from '@react-navigation/native';
+import { B2B } from '../constants/Colors';
 import ScreenHeader from '../components/ScreenHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../services/api';
+
+const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED, NAVY_MID } = B2B;
 
 interface Notification {
     _id: string;
@@ -31,6 +34,19 @@ export default function NotificationsScreen() {
     const insets = useSafeAreaInsets();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const [modalConfig, setModalConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+        onClose?: () => void;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'success'
+    });
     const [refreshing, setRefreshing] = useState(false);
 
     const fetchNotifications = async () => {
@@ -40,18 +56,14 @@ export default function NotificationsScreen() {
         } catch (error: any) {
             console.error('Error fetching notifications:', error);
             const msg = error.response?.data?.message || 'Failed to load notifications';
-            // Optional: Alert.alert('Error', msg); 
-            // Notifications often fail silently or show a Toast, but "show msg" implies user feedback.
-            Alert.alert('Error', msg);
+            setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
-    useEffect(() => {
-        fetchNotifications();
-    }, []);
+    useEffect(() => { fetchNotifications(); }, []);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -61,13 +73,11 @@ export default function NotificationsScreen() {
     const handleMarkAsRead = async (id: string) => {
         try {
             await api.patch(`/notifications/${id}/read`);
-            setNotifications(prev =>
-                prev.map(n => n._id === id ? { ...n, isRead: true } : n)
-            );
+            setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
         } catch (error: any) {
             console.error('Error marking as read:', error);
             const msg = error.response?.data?.message || 'Failed to update notification';
-            Alert.alert('Error', msg);
+            setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
         }
     };
 
@@ -82,42 +92,45 @@ export default function NotificationsScreen() {
 
     const getColor = (type: string) => {
         switch (type) {
-            case 'ORDER': return '#10b981'; // emerald
-            case 'PROMOTION': return '#f59e0b'; // amber
-            case 'SYSTEM': return '#3b82f6'; // blue
-            default: return '#6366f1'; // indigo
+            case 'ORDER': return '#10b981';
+            case 'PROMOTION': return GOLD;
+            case 'SYSTEM': return GOLD_LIGHT;
+            default: return GOLD;
         }
     };
 
     const getTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
-        const diff = (now.getTime() - date.getTime()) / 1000; // seconds
-
+        const diff = (now.getTime() - date.getTime()) / 1000;
         if (diff < 60) return 'Just now';
-        if (diff < 3600) return `${Math.floor(diff / 60)} mins ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-        return `${Math.floor(diff / 86400)} days ago`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
     };
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+            <LinearGradient colors={[NAVY, NAVY_MID, '#09101d']} style={styles.background} />
 
-            <LinearGradient
-                colors={Colors.gradient}
-                locations={Colors.locations}
-                style={styles.background}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            <MessageModal
+                visible={modalConfig.visible}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                type={modalConfig.type}
+                onClose={() => {
+                    setModalConfig(prev => ({ ...prev, visible: false }));
+                    if (modalConfig.onClose) modalConfig.onClose();
+                }}
             />
 
             <ScreenHeader
                 showBack
                 title="Notifications"
                 rightElement={
-                    <TouchableOpacity style={styles.iconButton} onPress={fetchNotifications}>
-                        <Icon name="refresh" size={24} color="#1e293b" />
+                    <TouchableOpacity style={styles.refreshBtn} onPress={fetchNotifications}>
+                        <Icon name="refresh" size={20} color={GOLD} />
                     </TouchableOpacity>
                 }
             />
@@ -125,16 +138,17 @@ export default function NotificationsScreen() {
             <ScrollView
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                }
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD} />}
             >
                 {loading ? (
-                    <ActivityIndicator size="large" color={Colors.light.primary} style={{ marginTop: 20 }} />
+                    <ActivityIndicator size="large" color={GOLD} style={{ marginTop: 40 }} />
                 ) : notifications.length === 0 ? (
                     <View style={styles.emptyContainer}>
-                        <Icon name="notifications-none" size={48} color="#94a3b8" />
-                        <Text style={styles.emptyText}>No notifications yet</Text>
+                        <View style={styles.emptyIconCircle}>
+                            <Icon name="notifications-none" size={48} color={GOLD_DARK} opacity={0.5} />
+                        </View>
+                        <Text style={styles.emptyText}>All caught up!</Text>
+                        <Text style={styles.emptySubtext}>Your notifications will appear here</Text>
                     </View>
                 ) : (
                     notifications.map((item) => (
@@ -142,20 +156,19 @@ export default function NotificationsScreen() {
                             key={item._id}
                             onPress={() => !item.isRead && handleMarkAsRead(item._id)}
                             activeOpacity={0.8}
+                            style={[styles.card, !item.isRead && styles.unreadCard]}
                         >
-                            <GlassView blurType="light" blurAmount={40} style={styles.card}>
-                                <View style={[styles.iconContainer, { backgroundColor: `${getColor(item.type)}20` }]}>
-                                    <Icon name={getIcon(item.type) as any} size={24} color={getColor(item.type)} />
+                            <View style={[styles.iconContainer, { backgroundColor: `${getColor(item.type)}15` }]}>
+                                <Icon name={getIcon(item.type) as any} size={22} color={getColor(item.type)} />
+                            </View>
+                            <View style={styles.textContainer}>
+                                <View style={styles.row}>
+                                    <Text style={[styles.title, !item.isRead && styles.unreadTitle]}>{item.title}</Text>
+                                    <Text style={styles.time}>{getTimeAgo(item.createdAt)}</Text>
                                 </View>
-                                <View style={styles.textContainer}>
-                                    <View style={styles.row}>
-                                        <Text style={styles.title}>{item.title}</Text>
-                                        <Text style={styles.time}>{getTimeAgo(item.createdAt)}</Text>
-                                    </View>
-                                    <Text style={styles.message}>{item.message}</Text>
-                                </View>
-                                {!item.isRead && <View style={styles.dot} />}
-                            </GlassView>
+                                <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
+                            </View>
+                            {!item.isRead && <View style={styles.unreadDot} />}
                         </TouchableOpacity>
                     ))
                 )}
@@ -165,99 +178,22 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    background: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    iconButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
-    },
-    headerTitle: {
-        fontSize: 14,
-        fontWeight: '900',
-        color: '#1e293b',
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-    },
-    content: {
-        paddingTop: 16,
-        paddingHorizontal: 16,
-        paddingBottom: 40,
-        // gap: 16,
-    },
-    card: {
-        flexDirection: 'row',
-        padding: 16,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.5)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        alignItems: 'center',
-        gap: 16,
-        overflow: 'hidden',
-        marginBottom: 16
-    },
-    iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    textContainer: {
-        flex: 1,
-        gap: 4,
-    },
-    row: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    title: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#1e293b',
-    },
-    time: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: '#64748b',
-    },
-    message: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: '#475569',
-        lineHeight: 18,
-    },
-    dot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#ef4444',
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 100,
-        gap: 16,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#94a3b8',
-        fontWeight: '500',
-    },
+    container: { flex: 1, backgroundColor: NAVY },
+    background: { ...StyleSheet.absoluteFillObject },
+    refreshBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: NAVY_INPUT, borderWidth: 1, borderColor: NAVY_BORDER },
+    content: { paddingVertical: 16, paddingHorizontal: 16, paddingBottom: 60 },
+    card: { flexDirection: 'row', padding: 16, borderRadius: 20, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, alignItems: 'center', gap: 14, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 4 },
+    unreadCard: { borderColor: 'rgba(201,168,76,0.2)', backgroundColor: 'rgba(201,168,76,0.03)' },
+    iconContainer: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    textContainer: { flex: 1, gap: 4 },
+    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    title: { fontSize: 13, fontWeight: '700', color: TEXT_MUTED },
+    unreadTitle: { color: TEXT_PRIMARY, fontWeight: '800' },
+    time: { fontSize: 10, fontWeight: '600', color: TEXT_MUTED },
+    message: { fontSize: 13, fontWeight: '500', color: TEXT_MUTED, lineHeight: 18 },
+    unreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD, marginLeft: 8 },
+    emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 120, gap: 12 },
+    emptyIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: NAVY_INPUT, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+    emptyText: { fontSize: 18, color: TEXT_PRIMARY, fontWeight: '800', letterSpacing: -0.5 },
+    emptySubtext: { fontSize: 13, color: TEXT_MUTED, fontWeight: '500' },
 });

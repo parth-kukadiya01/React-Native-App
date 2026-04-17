@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -8,36 +8,39 @@ import {
     TouchableOpacity,
     Modal,
     TextInput,
+    StatusBar,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
-import GlassView from '../components/GlassView';
-import { StatusBar } from 'react-native';
 import Icon from '../components/Icon';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../constants/Colors';
+import { B2B } from '../constants/Colors';
 import { cartService } from '../services/cartService';
 import { useCart } from '../context/CartContext';
-import { Alert, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { storage } from '../services/storage';
 import ScreenHeader from '../components/ScreenHeader';
 import { tpinService } from '../services/tpinService';
+import MessageModal from '../components/MessageModal';
 
-// Initial items removed to use backend data
+const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED, GOLD_DIM, GOLD_BORDER } = B2B;
 
 export default function CartScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const insets = useSafeAreaInsets();
-    const [cartItems, setCartItems] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { updateCartCount } = useCart();
-    const [quickAddSku, setQuickAddSku] = useState('');
-    const [quickAddQty, setQuickAddQty] = useState('1');
-    const [submitting, setSubmitting] = useState(false);
 
-    // T-PIN state
+    // Cart state
+    const [cartItems, setCartItems] = useState<any[]>([]);
+    const [loadingCart, setLoadingCart] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const { cartCount, updateCartCount } = useCart();
+
+    // T-PIN modal state
     const [showTpinModal, setShowTpinModal] = useState(false);
     const [tpinMode, setTpinMode] = useState<'verify' | 'generate' | 'confirm'>('verify');
     const [tpinInput, setTpinInput] = useState('');
@@ -45,10 +48,27 @@ export default function CartScreen() {
     const [tpinError, setTpinError] = useState('');
     const [tpinLoading, setTpinLoading] = useState(false);
 
+    // Refs so tapping the dots always re-opens the keyboard
+    const tpinInputRef = useRef<TextInput>(null);
+    const tpinConfirmRef = useRef<TextInput>(null);
+
+    const [modalConfig, setModalConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+        onClose?: () => void;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'success'
+    });
+
     const fetchCart = async () => {
         const token = await storage.getItem('userToken');
         if (!token) {
-            setLoading(false);
+            setLoadingCart(false);
             return;
         }
 
@@ -59,9 +79,8 @@ export default function CartScreen() {
             }
         } catch (error) {
             console.error('Error fetching cart:', error);
-            // Alert.alert('Error', 'Failed to fetch cart');
         } finally {
-            setLoading(false);
+            setLoadingCart(false);
         }
     };
 
@@ -76,9 +95,9 @@ export default function CartScreen() {
         try {
             await cartService.updateCartItem(id, newQty);
             await updateCartCount();
-            fetchCart(); // Refresh cart
+            fetchCart();
         } catch (error) {
-            Alert.alert('Error', 'Failed to update quantity');
+            setModalConfig({ visible: true, title: 'Error', message: 'Failed to update quantity', type: 'error' });
         }
     };
 
@@ -86,9 +105,9 @@ export default function CartScreen() {
         try {
             await cartService.removeCartItem(id);
             await updateCartCount();
-            fetchCart(); // Refresh cart
+            fetchCart();
         } catch (error) {
-            Alert.alert('Error', 'Failed to remove item');
+            setModalConfig({ visible: true, title: 'Error', message: 'Failed to remove item', type: 'error' });
         }
     };
 
@@ -96,16 +115,15 @@ export default function CartScreen() {
         try {
             await cartService.clearCart();
             await updateCartCount();
-            fetchCart(); // Refresh cart
+            fetchCart();
         } catch (error) {
-            Alert.alert('Error', 'Failed to clear cart');
+            setModalConfig({ visible: true, title: 'Error', message: 'Failed to clear cart', type: 'error' });
         }
     };
 
-    // T-PIN: Start order flow — check status then show appropriate modal
     const handleSubmitOrder = async () => {
         if (cartItems.length === 0) {
-            Alert.alert('Empty Cart', 'Please add items to your cart before submitting.');
+            setModalConfig({ visible: true, title: 'Empty Cart', message: 'Please add items to your cart before submitting.', type: 'info' });
             return;
         }
 
@@ -115,7 +133,7 @@ export default function CartScreen() {
             const { hasTpin, isLocked, minutesLeft } = statusRes.data;
 
             if (isLocked) {
-                Alert.alert('Account Locked', `Too many failed attempts. Try again in ${minutesLeft} minute(s).`);
+                setModalConfig({ visible: true, title: 'Account Locked', message: `Too many failed attempts. Try again in ${minutesLeft} minute(s).`, type: 'error' });
                 setTpinLoading(false);
                 return;
             }
@@ -131,13 +149,12 @@ export default function CartScreen() {
             }
             setShowTpinModal(true);
         } catch (error) {
-            Alert.alert('Error', 'Failed to check T-PIN status. Please try again.');
+            setModalConfig({ visible: true, title: 'Error', message: 'Failed to check T-PIN status. Please try again.', type: 'error' });
         } finally {
             setTpinLoading(false);
         }
     };
 
-    // T-PIN: Generate new T-PIN
     const handleGenerateTpin = async () => {
         if (tpinInput.length !== 4) {
             setTpinError('T-PIN must be exactly 4 digits');
@@ -150,27 +167,43 @@ export default function CartScreen() {
             setTpinError('');
             return;
         }
-        // Confirm step
+        // tpinMode === 'confirm'
         if (tpinConfirm !== tpinInput) {
             setTpinError('T-PINs do not match. Please try again.');
             return;
         }
         try {
             setTpinLoading(true);
+            // Step 1: Create the T-PIN
             await tpinService.generate(tpinInput);
-            setTpinMode('verify');
+            // Step 2: Immediately place the order with the new PIN
+            const response = await cartService.placeOrder(tpinInput);
+
+            // Step 3: Clear everything and navigate
+            setCartItems([]);
+            updateCartCount();
+            setShowTpinModal(false);
             setTpinInput('');
+            setTpinConfirm('');
             setTpinError('');
-            Alert.alert('Success', 'T-PIN created! Now enter your T-PIN to place the order.');
+
+            const orderId = response?.data?.orderId || response?.orderId || '';
+            setModalConfig({
+                visible: true,
+                title: 'Order Placed! 🎉',
+                message: `T-PIN created and order${orderId ? ` #${orderId}` : ''} submitted successfully!`,
+                type: 'success',
+            });
+            // Navigate immediately — don't wait for user to close modal
+            navigation.navigate('orders' as any);
         } catch (error: any) {
-            const msg = error.response?.data?.message || 'Failed to create T-PIN';
+            const msg = error.response?.data?.message || 'Failed to complete order';
             setTpinError(msg);
         } finally {
             setTpinLoading(false);
         }
     };
 
-    // T-PIN: Verify and place order
     const handleVerifyAndOrder = async () => {
         if (tpinInput.length !== 4) {
             setTpinError('T-PIN must be exactly 4 digits');
@@ -181,29 +214,36 @@ export default function CartScreen() {
             setSubmitting(true);
             const response = await cartService.placeOrder(tpinInput);
 
-            if (response.success) {
+            console.log('response', response)
+
+            // Accept any truthy success signal from the server
+            if (response?.success || response?.data?.orderId || response?.orderId || response?.data?.order) {
+                // 1. Clear T-PIN modal & cart state immediately
                 setShowTpinModal(false);
-                Alert.alert(
-                    'Order Placed!',
-                    `Your order #${response.data.orderId} has been submitted successfully.`,
-                    [
-                        {
-                            text: 'View Orders',
-                            onPress: () => {
-                                updateCartCount();
-                                fetchCart();
-                                navigation.navigate('orders' as any);
-                            }
-                        },
-                        {
-                            text: 'OK',
-                            onPress: () => {
-                                updateCartCount();
-                                fetchCart();
-                            }
-                        }
-                    ]
-                );
+                setTpinInput('');
+                setTpinError('');
+                setCartItems([]);
+                updateCartCount();
+
+                // 2. Navigate to orders right away (don't wait for modal close)
+                navigation.navigate('orders' as any);
+
+                // 3. Show a small success message on the orders screen
+                const orderId = response?.data?.orderId || response?.orderId || '';
+                setTimeout(() => {
+                    setModalConfig({
+                        visible: true,
+                        title: 'Order Placed! 🎉',
+                        message: `Your order${orderId ? ` #${orderId}` : ''} has been submitted successfully.`,
+                        type: 'success',
+                    });
+                }, 300);
+            } else {
+                // Success-looking response but no identifiable order ID — still navigate
+                setShowTpinModal(false);
+                setCartItems([]);
+                updateCartCount();
+                navigation.navigate('orders' as any);
             }
         } catch (error: any) {
             const msg = error.response?.data?.message || 'Failed to place order. Please try again.';
@@ -214,7 +254,6 @@ export default function CartScreen() {
         }
     };
 
-    // Dynamic weight computation based on actual cart items
     const weightBreakdown = useMemo(() => {
         let totalNetWt = 0;
         let totalGrossWt = 0;
@@ -235,84 +274,54 @@ export default function CartScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
 
-            {/* Background Gradient simulating radial effects */}
             <LinearGradient
-                colors={Colors.gradient}
-                locations={Colors.locations}
+                colors={[NAVY, B2B.NAVY_MID, '#111D35']}
+                locations={[0, 0.5, 1]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.background}
             />
 
+            <MessageModal
+                visible={modalConfig.visible}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                type={modalConfig.type}
+                onClose={() => {
+                    setModalConfig(prev => ({ ...prev, visible: false }));
+                    if (modalConfig.onClose) modalConfig.onClose();
+                }}
+                buttonText={modalConfig.title === 'Order Placed!' ? 'View Orders' : 'OK'}
+            />
+
             <ScreenHeader
                 showBack
-                title="Bulk Order Cart"
-                rightElement={
-                    <TouchableOpacity style={styles.clearButton} onPress={clearCart}>
-                        <Text style={styles.clearText}>Clear</Text>
-                    </TouchableOpacity>
-                }
+                title="Order Cart"
             />
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                {/* Quick Add SKU */}
-                <GlassView blurType="light" blurAmount={30} style={styles.card}>
-                    <Text style={styles.cardLabel}>QUICK ADD SKU</Text>
-                    <View style={styles.quickAddRow}>
-                        <View style={styles.inputWrapper}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="SKU-99283"
-                                placeholderTextColor="#94a3b8"
-                                value={quickAddSku}
-                                onChangeText={setQuickAddSku}
-                            />
-                        </View>
-                        <View style={styles.qtyInputWrapper}>
-                            <TextInput
-                                style={[styles.input, styles.qtyInput]}
-                                value={quickAddQty}
-                                onChangeText={setQuickAddQty}
-                                keyboardType="numeric"
-                            />
-                        </View>
-                        <TouchableOpacity style={styles.addButton}>
-                            <LinearGradient
-                                colors={['#60a5fa', '#3b82f6', '#2563eb']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={StyleSheet.absoluteFillObject}
-                            />
-                            <Icon name="add" size={24} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                </GlassView>
-
-                {/* Order Items Header */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Order Items ({cartItems.length})</Text>
-                    {loading && <ActivityIndicator size="small" color="#6366f1" />}
+                    {loadingCart && <ActivityIndicator size="small" color={GOLD} />}
                 </View>
 
-                {/* Order Items List */}
                 <View style={styles.itemsList}>
-                    {!loading && cartItems.length === 0 && (
+                    {!loadingCart && cartItems.length === 0 && (
                         <View style={{ alignItems: 'center', marginTop: 40 }}>
-                            <Icon name="shopping-cart" size={64} color="#cbd5e1" />
-                            <Text style={{ marginTop: 16, fontSize: 16, color: '#64748b' }}>Your cart is empty</Text>
+                            <Icon name="shopping-cart" size={64} color={NAVY_BORDER} />
+                            <Text style={{ marginTop: 16, fontSize: 16, color: TEXT_MUTED }}>Your cart is empty</Text>
                             <TouchableOpacity
-                                style={{ marginTop: 24, padding: 12, backgroundColor: '#6366f1', borderRadius: 8 }}
+                                style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: GOLD, borderRadius: 12 }}
                                 onPress={() => navigation.navigate('home' as any)}
                             >
-                                <Text style={{ color: 'white', fontWeight: 'bold' }}>Browse Products</Text>
+                                <Text style={{ color: NAVY, fontWeight: '900', fontSize: 12 }}>BROWSE PRODUCTS</Text>
                             </TouchableOpacity>
                         </View>
                     )}
                     {cartItems.map((item) => (
-                        <GlassView key={item._id} blurType="light" blurAmount={30} style={styles.itemCard}>
+                        <View key={item._id} style={styles.itemCard}>
                             <View style={styles.itemMain}>
                                 <Image source={{ uri: item.product?.images?.[0] || 'https://lh3.googleusercontent.com/aida-public/placeholder' }} style={styles.itemImage} />
                                 <View style={styles.itemInfo}>
@@ -322,13 +331,13 @@ export default function CartScreen() {
                                             <Text style={styles.itemSku}>{item.product?.sku || 'NO-SKU'}</Text>
                                         </View>
                                         <TouchableOpacity style={styles.removeButton} onPress={() => removeItem(item._id)}>
-                                            <Icon name="close" size={20} color="#94a3b8" />
+                                            <Icon name="close" size={20} color={TEXT_MUTED} />
                                         </TouchableOpacity>
                                     </View>
                                     <View style={styles.tagsRow}>
-                                        <View style={[styles.tag, styles.tagBlue]}>
-                                            <Text style={[styles.tagText, { color: '#2563eb' }]}>
-                                                {item.purity || '18K'} {item.material || 'Yellow Gold'}
+                                        <View style={styles.tag}>
+                                            <Text style={styles.tagText}>
+                                                {item.purity || '18K'} {item.material || 'Gold'}
                                             </Text>
                                         </View>
                                     </View>
@@ -336,24 +345,38 @@ export default function CartScreen() {
                             </View>
 
                             <View style={styles.itemControls}>
-                                <View style={styles.controlGroup}>
+                                <View style={[styles.controlGroup]}>
                                     <Text style={styles.controlLabel}>SIZE</Text>
                                     <View style={styles.dateDisplay}>
                                         <Text style={styles.dateText}>{item.size || 'N/A'}</Text>
                                     </View>
                                 </View>
-                                <View style={styles.controlGroup}>
+                                <View style={[styles.controlGroup]}>
                                     <Text style={[styles.controlLabel, { textAlign: 'right' }]}>QUANTITY</Text>
                                     <View style={styles.qtyControl}>
-                                        <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item._id, item.quantity, -1)}>
-                                            <Icon name="remove" size={16} color="#475569" />
+                                        <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item._id, item.quantity, -1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                                            <Icon name="remove" size={16} color={GOLD} />
                                         </TouchableOpacity>
                                         <Text style={styles.qtyText}>{item.quantity}</Text>
-                                        <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item._id, item.quantity, 1)}>
-                                            <Icon name="add" size={16} color="#475569" />
+                                        <TouchableOpacity style={styles.qtyBtn} onPress={() => updateQuantity(item._id, item.quantity, 1)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                                            <Icon name="add" size={16} color={GOLD} />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
+                            </View>
+
+                            {item.description ? (
+                                <View style={styles.itemNoteRow}>
+                                    <Text style={styles.controlLabel}>NOTE</Text>
+                                    <View style={styles.noteDisplay}>
+                                        <Text style={styles.noteText}>{item.description}</Text>
+                                    </View>
+                                </View>
+                            ) : null}
+
+                            <View style={styles.itemDateRow}>
+                                <Text style={styles.controlLabel}>DATE ADDED: </Text>
+                                <Text style={styles.dateTextSmall}>{new Date(item.createdAt || Date.now()).toLocaleDateString()}</Text>
                             </View>
 
                             <View style={styles.itemWeights}>
@@ -366,14 +389,12 @@ export default function CartScreen() {
                                     <Text style={styles.weightValue}>{(parseFloat(item.product?.grossWt || '0') * (item.quantity || 1)).toFixed(2)}g</Text>
                                 </View>
                             </View>
-                        </GlassView>
+                        </View>
                     ))}
                 </View>
 
-                {/* Weight Breakdown */}
-                <GlassView blurType="light" blurAmount={40} style={[styles.card, styles.breakdownCard]}>
+                <View style={[styles.card, styles.breakdownCard]}>
                     <Text style={styles.breakdownTitle}>WEIGHT BREAKDOWN</Text>
-
                     <View style={styles.breakdownRow}>
                         <Text style={styles.breakdownLabel}>TOTAL NET WEIGHT</Text>
                         <Text style={styles.breakdownValue}>{weightBreakdown.totalNetWt} g</Text>
@@ -382,7 +403,6 @@ export default function CartScreen() {
                         <Text style={styles.breakdownLabel}>TOTAL GROSS WEIGHT</Text>
                         <Text style={styles.breakdownValue}>{weightBreakdown.totalGrossWt} g</Text>
                     </View>
-
                     <View style={styles.totalRow}>
                         <View>
                             <Text style={styles.totalLabel}>AGGREGATE TOTAL</Text>
@@ -390,126 +410,136 @@ export default function CartScreen() {
                         </View>
                         <Text style={styles.totalValue}>{weightBreakdown.totalGrossWt} <Text style={styles.unitText}>g</Text></Text>
                     </View>
-                </GlassView>
+                </View>
 
-                {/* Info Card */}
-                <GlassView blurType="light" blurAmount={30} style={styles.infoCard}>
-                    <Icon name="info" size={20} color="#3b82f6" />
+                <View style={styles.infoCard}>
+                    <Icon name="info" size={20} color={GOLD} />
                     <Text style={styles.infoText}>
                         Estimated weights are provided for reference. Final verified gross weight and shipping documentation will be provided upon dispatch. Delivery dates are item-specific.
                     </Text>
-                </GlassView>
-
+                </View>
             </ScrollView>
 
-            {/* Bottom Bar */}
-            <GlassView blurType="light" blurAmount={60} style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+            <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24) }]}>
                 <TouchableOpacity
                     style={[styles.submitButton, (submitting || cartItems.length === 0) && { opacity: 0.7 }]}
                     onPress={handleSubmitOrder}
                     disabled={submitting || cartItems.length === 0}
                 >
                     <LinearGradient
-                        colors={['#60a5fa', '#3b82f6', '#2563eb']}
+                        colors={[GOLD_DARK, GOLD, GOLD_LIGHT]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={StyleSheet.absoluteFillObject}
                     />
                     <Text style={styles.submitText}>{submitting ? 'Placing Order...' : 'Submit Order Request'}</Text>
-                    {/* {!submitting && <Icon name="send" size={20} color="white" />} */}
-                    {submitting && <ActivityIndicator size="small" color="white" style={{ marginLeft: 8 }} />}
+                    {submitting && <ActivityIndicator size="small" color={NAVY} style={{ marginLeft: 8 }} />}
                 </TouchableOpacity>
-            </GlassView>
+            </View>
 
-            {/* T-PIN Modal */}
             <Modal visible={showTpinModal} transparent animationType="fade" onRequestClose={() => setShowTpinModal(false)}>
-                <View style={tpinStyles.overlay}>
-                    <GlassView blurType="dark" blurAmount={40} style={tpinStyles.modalCard}>
-                        <TouchableOpacity style={tpinStyles.closeBtn} onPress={() => setShowTpinModal(false)}>
-                            <Icon name="close" size={24} color="#94a3b8" />
-                        </TouchableOpacity>
-
-                        <View style={tpinStyles.iconCircle}>
-                            <Icon name={tpinMode === 'verify' ? 'lock' : 'vpn-key'} size={32} color="#3b82f6" />
-                        </View>
-
-                        <Text style={tpinStyles.title}>
-                            {tpinMode === 'verify' ? 'Enter T-PIN' : tpinMode === 'generate' ? 'Create T-PIN' : 'Confirm T-PIN'}
-                        </Text>
-                        <Text style={tpinStyles.subtitle}>
-                            {tpinMode === 'verify'
-                                ? 'Enter your 4-digit T-PIN to place the order'
-                                : tpinMode === 'generate'
-                                    ? 'Create a 4-digit T-PIN for secure order placement'
-                                    : 'Re-enter your T-PIN to confirm'}
-                        </Text>
-
-                        {tpinMode === 'confirm' ? (
-                            <View style={tpinStyles.inputGroup}>
-                                <Text style={tpinStyles.inputLabel}>Re-enter T-PIN</Text>
-                                <TextInput
-                                    style={tpinStyles.input}
-                                    value={tpinConfirm}
-                                    onChangeText={(t) => { setTpinConfirm(t.replace(/[^0-9]/g, '').slice(0, 4)); setTpinError(''); }}
-                                    placeholder="● ● ● ●"
-                                    placeholderTextColor="#cbd5e1"
-                                    keyboardType="number-pad"
-                                    maxLength={4}
-                                    secureTextEntry
-                                    autoFocus
-                                    textAlign="center"
-                                />
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                    <View style={tpinStyles.overlay}>
+                        <View style={tpinStyles.modalCard}>
+                            <TouchableOpacity style={tpinStyles.closeBtn} onPress={() => setShowTpinModal(false)}>
+                                <Icon name="close" size={24} color={TEXT_MUTED} />
+                            </TouchableOpacity>
+                            <View style={tpinStyles.iconCircle}>
+                                <Icon name={tpinMode === 'verify' ? 'lock' : 'vpn-key'} size={32} color={GOLD} />
                             </View>
-                        ) : (
-                            <View style={tpinStyles.inputGroup}>
-                                <Text style={tpinStyles.inputLabel}>
-                                    {tpinMode === 'verify' ? 'Enter T-PIN' : 'Create 4-digit T-PIN'}
-                                </Text>
-                                <TextInput
-                                    style={tpinStyles.input}
-                                    value={tpinInput}
-                                    onChangeText={(t) => { setTpinInput(t.replace(/[^0-9]/g, '').slice(0, 4)); setTpinError(''); }}
-                                    placeholder="● ● ● ●"
-                                    placeholderTextColor="#cbd5e1"
-                                    keyboardType="number-pad"
-                                    maxLength={4}
-                                    secureTextEntry
-                                    autoFocus
-                                    textAlign="center"
-                                />
-                            </View>
-                        )}
+                            <Text style={tpinStyles.title}>
+                                {tpinMode === 'verify' ? 'Enter T-PIN' : tpinMode === 'generate' ? 'Create T-PIN' : 'Confirm T-PIN'}
+                            </Text>
+                            <Text style={tpinStyles.subtitle}>
+                                {tpinMode === 'verify'
+                                    ? 'Enter your 4-digit T-PIN to place the order'
+                                    : tpinMode === 'generate'
+                                        ? 'Create a 4-digit T-PIN for secure order placement'
+                                        : 'Re-enter your T-PIN to confirm'}
+                            </Text>
 
-                        {!!tpinError && (
-                            <View style={tpinStyles.errorRow}>
-                                <Icon name="error-outline" size={16} color="#ef4444" />
-                                <Text style={tpinStyles.errorText}>{tpinError}</Text>
-                            </View>
-                        )}
-
-                        <TouchableOpacity
-                            style={[tpinStyles.actionBtn, tpinLoading && { opacity: 0.7 }]}
-                            onPress={tpinMode === 'verify' ? handleVerifyAndOrder : handleGenerateTpin}
-                            disabled={tpinLoading}
-                        >
-                            <LinearGradient
-                                colors={['#60a5fa', '#3b82f6', '#2563eb']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={StyleSheet.absoluteFillObject}
-                            />
-                            {tpinLoading ? (
-                                <ActivityIndicator size="small" color="white" />
+                            {/* CONFIRM PIN dots */}
+                            {tpinMode === 'confirm' ? (
+                                <View style={tpinStyles.inputGroup}>
+                                    <Text style={tpinStyles.inputLabel}>Re-enter T-PIN</Text>
+                                    <Pressable
+                                        style={tpinStyles.pinContainer}
+                                        onPress={() => tpinConfirmRef.current?.focus()}
+                                    >
+                                        {[0, 1, 2, 3].map((i) => (
+                                            <View key={i} style={[tpinStyles.pinDot, tpinConfirm.length > i && tpinStyles.pinDotActive]}>
+                                                <Text style={tpinStyles.pinText}>{tpinConfirm[i] ? '●' : ''}</Text>
+                                            </View>
+                                        ))}
+                                    </Pressable>
+                                    <TextInput
+                                        ref={tpinConfirmRef}
+                                        style={tpinStyles.hiddenInput}
+                                        value={tpinConfirm}
+                                        onChangeText={(t) => { setTpinConfirm(t.replace(/[^0-9]/g, '').slice(0, 4)); setTpinError(''); }}
+                                        keyboardType="number-pad"
+                                        maxLength={4}
+                                        autoFocus
+                                    />
+                                </View>
                             ) : (
-                                <Text style={tpinStyles.actionBtnText}>
-                                    {tpinMode === 'verify' ? 'Verify & Place Order' : tpinMode === 'generate' ? 'Next' : 'Create T-PIN'}
-                                </Text>
+                                /* VERIFY / GENERATE PIN dots */
+                                <View style={tpinStyles.inputGroup}>
+                                    <Text style={tpinStyles.inputLabel}>
+                                        {tpinMode === 'verify' ? 'Enter T-PIN' : 'Create 4-digit T-PIN'}
+                                    </Text>
+                                    <Pressable
+                                        style={tpinStyles.pinContainer}
+                                        onPress={() => tpinInputRef.current?.focus()}
+                                    >
+                                        {[0, 1, 2, 3].map((i) => (
+                                            <View key={i} style={[tpinStyles.pinDot, tpinInput.length > i && tpinStyles.pinDotActive]}>
+                                                <Text style={tpinStyles.pinText}>{tpinInput[i] ? '●' : ''}</Text>
+                                            </View>
+                                        ))}
+                                    </Pressable>
+                                    <TextInput
+                                        ref={tpinInputRef}
+                                        style={tpinStyles.hiddenInput}
+                                        value={tpinInput}
+                                        onChangeText={(t) => { setTpinInput(t.replace(/[^0-9]/g, '').slice(0, 4)); setTpinError(''); }}
+                                        keyboardType="number-pad"
+                                        maxLength={4}
+                                        autoFocus
+                                    />
+                                </View>
                             )}
-                        </TouchableOpacity>
-                    </GlassView>
-                </View>
-            </Modal>
 
+                            {!!tpinError && (
+                                <View style={tpinStyles.errorRow}>
+                                    <Icon name="error-outline" size={16} color="#fb7185" />
+                                    <Text style={tpinStyles.errorText}>{tpinError}</Text>
+                                </View>
+                            )}
+
+                            <TouchableOpacity
+                                style={[tpinStyles.actionBtn, tpinLoading && { opacity: 0.7 }]}
+                                onPress={tpinMode === 'verify' ? handleVerifyAndOrder : handleGenerateTpin}
+                                disabled={tpinLoading}
+                            >
+                                <LinearGradient
+                                    colors={[GOLD_DARK, GOLD, GOLD_LIGHT]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={StyleSheet.absoluteFillObject}
+                                />
+                                {tpinLoading ? (
+                                    <ActivityIndicator size="small" color={NAVY} />
+                                ) : (
+                                    <Text style={tpinStyles.actionBtnText}>
+                                        {tpinMode === 'verify' ? 'Verify & Place Order' : tpinMode === 'generate' ? 'Next' : 'Create T-PIN'}
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
         </View>
     );
 }
@@ -517,7 +547,7 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: NAVY,
     },
     background: {
         position: 'absolute',
@@ -526,47 +556,38 @@ const styles = StyleSheet.create({
         top: 0,
         bottom: 0,
     },
-    headerTitle: {
-        fontSize: 16,
-        fontWeight: '900',
-        color: '#475569',
-        letterSpacing: -0.5,
-    },
     clearButton: {
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: NAVY_INPUT,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
+        borderColor: NAVY_BORDER,
     },
     clearText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#6366f1',
+        fontSize: 11,
+        fontWeight: '800',
+        color: GOLD,
+        letterSpacing: 0.5,
     },
     scrollContent: {
         paddingTop: 24,
-        paddingBottom: 140,
+        paddingBottom: 160,
         paddingHorizontal: 20,
     },
     card: {
         borderRadius: 24,
         padding: 24,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: NAVY_CARD,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.1,
-        shadowRadius: 32,
+        borderColor: NAVY_BORDER,
         marginBottom: 32,
         overflow: 'hidden',
     },
     cardLabel: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '900',
-        color: '#64748b',
+        color: TEXT_MUTED,
         letterSpacing: 2,
         textTransform: 'uppercase',
         marginBottom: 16,
@@ -578,27 +599,27 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flex: 1,
         height: 52,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: NAVY_INPUT,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
+        borderColor: NAVY_BORDER,
         justifyContent: 'center',
         paddingHorizontal: 16,
     },
     qtyInputWrapper: {
         width: 72,
         height: 52,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: NAVY_INPUT,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
+        borderColor: NAVY_BORDER,
         justifyContent: 'center',
         alignItems: 'center',
     },
     input: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1e293b',
+        fontSize: 14,
+        fontWeight: '700',
+        color: TEXT_PRIMARY,
         width: '100%',
     },
     qtyInput: {
@@ -612,10 +633,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
-        shadowColor: '#3b82f6',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -627,7 +644,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: '900',
-        color: '#1e293b',
+        color: TEXT_PRIMARY,
         letterSpacing: -0.5,
     },
     itemsList: {
@@ -637,13 +654,9 @@ const styles = StyleSheet.create({
     itemCard: {
         borderRadius: 24,
         padding: 20,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: NAVY_CARD,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 24,
+        borderColor: NAVY_BORDER,
         overflow: 'hidden',
     },
     itemMain: {
@@ -655,8 +668,9 @@ const styles = StyleSheet.create({
         width: 72,
         height: 72,
         borderRadius: 20,
+        backgroundColor: NAVY_INPUT,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
+        borderColor: NAVY_BORDER,
     },
     itemInfo: {
         flex: 1,
@@ -669,13 +683,13 @@ const styles = StyleSheet.create({
     itemName: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1e293b',
+        color: TEXT_PRIMARY,
         marginBottom: 4,
     },
     itemSku: {
         fontSize: 11,
         fontWeight: '800',
-        color: '#64748b',
+        color: TEXT_MUTED,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
@@ -683,7 +697,6 @@ const styles = StyleSheet.create({
         padding: 8,
         marginRight: -8,
         marginTop: -8,
-        opacity: 0.6,
     },
     tagsRow: {
         flexDirection: 'row',
@@ -693,23 +706,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
+        backgroundColor: NAVY_INPUT,
         borderWidth: 1,
-    },
-    tagBlue: {
-        backgroundColor: 'rgba(239, 246, 255, 0.6)',
-        borderColor: 'rgba(219, 234, 254, 0.8)',
-    },
-    tagPink: {
-        backgroundColor: 'rgba(253, 242, 248, 0.6)',
-        borderColor: 'rgba(252, 231, 243, 0.8)',
-    },
-    tagSlate: {
-        backgroundColor: 'rgba(248, 250, 252, 0.6)',
-        borderColor: 'rgba(226, 232, 240, 0.8)',
+        borderColor: GOLD_BORDER,
     },
     tagText: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '800',
+        color: GOLD,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
@@ -723,53 +727,79 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     controlLabel: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '900',
-        color: '#94a3b8',
+        color: TEXT_MUTED,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     dateDisplay: {
         height: 44,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: NAVY_INPUT,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
+        borderColor: NAVY_BORDER,
         justifyContent: 'center',
         paddingHorizontal: 16,
     },
     dateText: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#334155',
+        color: TEXT_PRIMARY,
     },
     qtyControl: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        gap: 16,
     },
     qtyBtn: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: NAVY_INPUT,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
+        borderColor: NAVY_BORDER,
     },
     qtyText: {
         fontSize: 18,
         fontWeight: '800',
-        color: '#1e293b',
-        width: 24,
+        color: TEXT_PRIMARY,
+        width: 32,
         textAlign: 'center',
+    },
+    itemNoteRow: {
+        marginBottom: 16,
+    },
+    noteDisplay: {
+        backgroundColor: NAVY_INPUT,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        padding: 12,
+        marginTop: 8,
+    },
+    noteText: {
+        fontSize: 12,
+        color: TEXT_PRIMARY,
+        lineHeight: 18,
+    },
+    itemDateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        gap: 8,
+    },
+    dateTextSmall: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: TEXT_PRIMARY,
     },
     itemWeights: {
         flexDirection: 'row',
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.5)',
+        borderTopColor: NAVY_BORDER,
         paddingTop: 16,
     },
     weightCol: {
@@ -778,34 +808,34 @@ const styles = StyleSheet.create({
     },
     weightBorder: {
         borderLeftWidth: 1,
-        borderLeftColor: 'rgba(255,255,255,0.6)',
+        borderLeftColor: NAVY_BORDER,
         paddingLeft: 20,
     },
     weightLabel: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '900',
-        color: '#94a3b8',
+        color: TEXT_MUTED,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     weightValue: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#1e293b',
+        color: TEXT_PRIMARY,
     },
     breakdownCard: {
         marginBottom: 32,
     },
     breakdownTitle: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '900',
-        color: '#64748b',
+        color: GOLD,
         textTransform: 'uppercase',
         letterSpacing: 2,
         marginBottom: 20,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.6)',
-        paddingBottom: 20,
+        borderBottomColor: NAVY_BORDER,
+        paddingBottom: 16,
     },
     breakdownRow: {
         flexDirection: 'row',
@@ -814,81 +844,65 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     breakdownLabel: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '700',
-        color: '#64748b',
+        color: TEXT_MUTED,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     breakdownValue: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '700',
-        color: '#1e293b',
-    },
-    allowanceLabel: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    allowanceText: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: '#6366f1',
-        textTransform: 'uppercase',
-    },
-    allowanceValue: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#6366f1',
+        color: TEXT_PRIMARY,
     },
     totalRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.6)',
+        borderTopColor: NAVY_BORDER,
         paddingTop: 24,
         marginTop: 8,
     },
     totalLabel: {
         fontSize: 10,
         fontWeight: '900',
-        color: '#94a3b8',
+        color: TEXT_MUTED,
         textTransform: 'uppercase',
         letterSpacing: 2,
     },
     totalSubLabel: {
         fontSize: 18,
         fontWeight: '900',
-        color: '#0f172a',
+        color: TEXT_PRIMARY,
         marginTop: 4,
     },
     totalValue: {
         fontSize: 32,
         fontWeight: '900',
-        color: '#0f172a',
+        color: GOLD,
     },
     unitText: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '700',
-        color: '#64748b',
+        color: TEXT_MUTED,
     },
     infoCard: {
         flexDirection: 'row',
-        padding: 24,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        padding: 20,
+        borderRadius: 20,
+        backgroundColor: 'rgba(201,168,76,0.05)',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
+        borderColor: GOLD_BORDER,
         gap: 16,
         alignItems: 'flex-start',
     },
     infoText: {
         flex: 1,
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '500',
-        color: '#64748b',
-        lineHeight: 20,
+        color: TEXT_MUTED,
+        lineHeight: 18,
     },
     bottomBar: {
         position: 'absolute',
@@ -897,8 +911,8 @@ const styles = StyleSheet.create({
         right: 0,
         padding: 24,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.5)',
-        backgroundColor: 'rgba(255,255,255,0.8)',
+        borderTopColor: NAVY_BORDER,
+        backgroundColor: 'rgba(11,18,32,0.95)',
     },
     submitButton: {
         height: 60,
@@ -908,16 +922,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 12,
         overflow: 'hidden',
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
     },
     submitText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '900',
-        color: 'white',
+        color: NAVY,
         letterSpacing: 1,
         textTransform: 'uppercase',
     },
@@ -926,95 +935,128 @@ const styles = StyleSheet.create({
 const tpinStyles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: 'rgba(11,18,32,0.85)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
     },
     modalCard: {
         width: '100%',
-        maxWidth: 380,
-        borderRadius: 28,
+        maxWidth: 400,
+        borderRadius: 32,
         padding: 32,
+        backgroundColor: NAVY_CARD,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
         alignItems: 'center',
-        overflow: 'hidden',
-        backgroundColor: 'rgba(255,255,255,0.95)',
     },
     closeBtn: {
         position: 'absolute',
-        top: 16,
-        right: 16,
-        zIndex: 10,
-    },
-    iconCircle: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: 'rgba(59,130,246,0.12)',
+        top: 20,
+        right: 20,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: NAVY_INPUT,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+    },
+    iconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: GOLD_DIM,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: GOLD_BORDER,
     },
     title: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: '800',
-        color: '#1e293b',
+        color: TEXT_PRIMARY,
         marginBottom: 8,
+        letterSpacing: -0.5,
     },
     subtitle: {
         fontSize: 14,
-        color: '#64748b',
+        color: TEXT_MUTED,
         textAlign: 'center',
-        marginBottom: 24,
+        marginBottom: 32,
         lineHeight: 20,
     },
     inputGroup: {
         width: '100%',
-        marginBottom: 16,
+        marginBottom: 24,
     },
     inputLabel: {
-        fontSize: 11,
-        fontWeight: '800',
-        color: '#64748b',
-        marginBottom: 8,
-        marginLeft: 4,
+        fontSize: 10,
+        fontWeight: '900',
+        color: TEXT_MUTED,
+        marginBottom: 12,
+        textAlign: 'center',
         textTransform: 'uppercase',
-        letterSpacing: 1,
+        letterSpacing: 1.5,
     },
-    input: {
-        width: '100%',
+    pinContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 16,
+        paddingVertical: 10,
+    },
+    pinDot: {
+        width: 48,
         height: 56,
-        borderRadius: 16,
-        backgroundColor: '#f1f5f9',
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1e293b',
-        letterSpacing: 12,
-        paddingHorizontal: 20,
+        borderRadius: 12,
+        backgroundColor: NAVY_INPUT,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    pinDotActive: {
+        borderColor: GOLD,
+    },
+    pinText: {
+        fontSize: 20,
+        color: GOLD,
+    },
+    hiddenInput: {
+        position: 'absolute',
+        top: 24, // below the label
+        bottom: 0,
+        left: 0,
+        right: 0,
+        opacity: 0,
+        fontSize: 1,
     },
     errorRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        marginBottom: 16,
+        gap: 8,
+        marginBottom: 24,
     },
     errorText: {
         fontSize: 13,
-        color: '#ef4444',
+        color: '#fb7185',
         fontWeight: '600',
     },
     actionBtn: {
         width: '100%',
-        height: 52,
+        height: 56,
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
     },
     actionBtnText: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: 'white',
-        letterSpacing: 0.5,
+        fontSize: 14,
+        fontWeight: '900',
+        color: NAVY,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
 });

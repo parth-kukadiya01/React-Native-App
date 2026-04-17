@@ -6,32 +6,46 @@ import {
     ScrollView,
     Image,
     TouchableOpacity,
-
     FlatList,
     ActivityIndicator,
     Alert,
+    StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
-import GlassView from '../components/GlassView';
-import { StatusBar } from 'react-native';
 import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../constants/Colors';
+import { B2B } from '../constants/Colors';
 import { favoriteService } from '../services/favoriteService';
 import ScreenHeader from '../components/ScreenHeader';
 import BottomNav from '../components/BottomNav';
+import MessageModal from '../components/MessageModal';
 import { useCart } from '../context/CartContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { useResponsive } from '../hooks/useResponsive';
 
+const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED, GOLD_DIM, NAVY_MID } = B2B;
 
 export default function FavoritesScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const insets = useSafeAreaInsets();
     const [favorites, setFavorites] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [addingToCart, setAddingToCart] = useState<string | null>(null);
+
+    const [modalConfig, setModalConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+        onClose?: () => void;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'success'
+    });
     const { width } = useResponsive();
     const CARD_WIDTH = (width - 48) / 2;
 
@@ -47,13 +61,12 @@ export default function FavoritesScreen() {
         } catch (error: any) {
             console.error('Error fetching favorites:', error);
             const msg = error.response?.data?.message || 'Failed to load favorites';
-            Alert.alert('Error', msg);
+            setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
-    // Re-fetch favorites every time screen comes into focus
     useFocusEffect(
         useCallback(() => {
             updateCartCount();
@@ -66,13 +79,12 @@ export default function FavoritesScreen() {
             await favoriteService.removeFavorite(id);
             setFavorites(current => current.filter((item: any) => (item.id || item._id) !== id));
         } catch (error: any) {
-            // If already removed (404), just update UI
             if (error?.response?.status === 404) {
                 setFavorites(current => current.filter((item: any) => (item.id || item._id) !== id));
             } else {
                 console.error('Error removing favorite:', error);
                 const msg = error.response?.data?.message || 'Failed to remove from favorites';
-                Alert.alert('Error', msg);
+                setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
             }
         }
     };
@@ -90,7 +102,7 @@ export default function FavoritesScreen() {
             activeOpacity={0.9}
         >
             <View style={styles.imageContainer}>
-                <Image source={{ uri: item.image }} style={styles.productImage} />
+                <Image source={{ uri: item.image }} style={styles.productImage} resizeMode="contain" />
                 <TouchableOpacity
                     style={styles.favoriteButton}
                     onPress={() => removeFavorite((item.id || item._id).toString())}
@@ -114,8 +126,8 @@ export default function FavoritesScreen() {
                 </View>
 
                 <View style={styles.materialRow}>
-                    <View style={[styles.materialDot, { backgroundColor: '#f3d7d4' }]} />
-                    <Text style={styles.materialText}>{item.goldType || 'Gold'}</Text>
+                    <View style={[styles.materialDot, { backgroundColor: GOLD }]} />
+                    <Text style={styles.materialText}>{item.goldType || 'Fine Gold'}</Text>
                 </View>
             </View>
         </TouchableOpacity>
@@ -123,48 +135,48 @@ export default function FavoritesScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+            <LinearGradient colors={[NAVY, NAVY_MID, '#09101d']} style={styles.background} />
 
-            <LinearGradient
-                colors={Colors.gradient}
-                locations={Colors.locations}
-                style={styles.background}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            <MessageModal
+                visible={modalConfig.visible}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                type={modalConfig.type}
+                onClose={() => {
+                    setModalConfig(prev => ({ ...prev, visible: false }));
+                    if (modalConfig.onClose) modalConfig.onClose();
+                }}
             />
 
             <ScreenHeader showBack title="Curated Favorites" showCart />
 
             <View style={styles.headerFilters}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filterContainer}
-                >
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
                     <TouchableOpacity style={[styles.filterChip, styles.activeFilterChip]}>
-                        <Text style={[styles.filterText, styles.activeFilterText]}>ALL ITEMS</Text>
+                        <Text style={[styles.filterText, styles.activeFilterText]}>ALL SAVED ITEMS</Text>
                     </TouchableOpacity>
                 </ScrollView>
             </View>
 
-            {/* Content */}
             {loading ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color="#0f172a" />
-                    <Text style={{ marginTop: 12, color: '#64748b', fontSize: 13, fontWeight: '600' }}>Loading favorites...</Text>
+                    <ActivityIndicator size="large" color={GOLD} />
+                    <Text style={{ marginTop: 12, color: TEXT_MUTED, fontSize: 13, fontWeight: '600' }}>Loading favorites...</Text>
                 </View>
             ) : favorites.length === 0 ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 100 }}>
-                    <Icon name="favorite-border" size={64} color="#cbd5e1" />
-                    <Text style={{ marginTop: 16, color: '#1e293b', fontSize: 18, fontWeight: '700' }}>No favorites yet</Text>
-                    <Text style={{ marginTop: 6, color: '#64748b', fontSize: 13, fontWeight: '500', textAlign: 'center', paddingHorizontal: 40 }}>
-                        Tap the heart icon on any product to save it here
+                    <View style={styles.emptyIconContainer}>
+                        <Icon name="favorite-border" size={64} color={GOLD_DIM} />
+                    </View>
+                    <Text style={{ marginTop: 24, color: TEXT_PRIMARY, fontSize: 18, fontWeight: '800', letterSpacing: -0.5 }}>Your wishlist is empty</Text>
+                    <Text style={{ marginTop: 8, color: TEXT_MUTED, fontSize: 13, fontWeight: '500', textAlign: 'center', paddingHorizontal: 60, lineHeight: 18 }}>
+                        Discover exquisite pieces from our catalog and save them for later
                     </Text>
-                    <TouchableOpacity
-                        style={styles.browseButton}
-                        onPress={() => navigation.navigate('catalog' as any)}
-                    >
-                        <Text style={styles.browseButtonText}>BROWSE CATALOG</Text>
+                    <TouchableOpacity style={styles.browseButton} onPress={() => navigation.navigate('catalog' as any)}>
+                        <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={styles.browseButtonGradient}>
+                            <Text style={styles.browseButtonText}>EXPLORE CATALOG</Text>
+                        </LinearGradient>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -185,170 +197,31 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    background: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    headerFilters: {
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.6)',
-        zIndex: 10,
-    },
-    filterContainer: {
-        gap: 8,
-        paddingBottom: 16,
-        paddingHorizontal: 20,
-        paddingTop: 8,
-    },
-    filterChip: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
-    },
-    activeFilterChip: {
-        backgroundColor: '#0f172a',
-        borderColor: '#0f172a',
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    filterText: {
-        fontSize: 11,
-        fontWeight: '700',
-        color: '#64748b',
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-    },
-    activeFilterText: {
-        color: '#fff',
-        fontWeight: '900',
-    },
-    gridContent: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 140, // Increased bottom padding
-    },
-    gridColumn: {
-        justifyContent: 'space-between',
-        marginBottom: 14,
-    },
-    productCard: {
-        borderRadius: 20,
-        padding: 10,
-        backgroundColor: 'rgba(255,255,255,0.45)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-    },
-    imageContainer: {
-        width: '100%',
-        aspectRatio: 0.9,
-        borderRadius: 14,
-        overflow: 'hidden',
-        position: 'relative',
-        marginBottom: 10,
-        backgroundColor: '#f8fafc',
-    },
-    productImage: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-    },
-    favoriteButton: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'rgba(255,255,255,0.7)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-    },
-    productInfo: {
-        paddingHorizontal: 4,
-        paddingTop: 2,
-    },
-    productName: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0f172a',
-        marginBottom: 6,
-    },
-    weightRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 6,
-        paddingVertical: 6,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: 'rgba(0,0,0,0.04)',
-    },
-    weightItem: {
-        alignItems: 'center',
-    },
-    weightLabel: {
-        fontSize: 8,
-        fontWeight: '800',
-        color: '#94a3b8',
-        letterSpacing: 1,
-        marginBottom: 2,
-    },
-    weightValue: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0f172a',
-    },
-    materialRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    materialDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: 'white',
-    },
-    materialText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    browseButton: {
-        marginTop: 24,
-        backgroundColor: '#0f172a',
-        paddingHorizontal: 24,
-        paddingVertical: 14,
-        borderRadius: 14,
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    browseButtonText: {
-        color: 'white',
-        fontSize: 12,
-        fontWeight: '800',
-        letterSpacing: 1.5,
-    },
+    container: { flex: 1, backgroundColor: NAVY },
+    background: { ...StyleSheet.absoluteFillObject },
+    headerFilters: { backgroundColor: 'rgba(10,18,32,0.4)', borderBottomWidth: 1, borderBottomColor: NAVY_BORDER, zIndex: 10 },
+    filterContainer: { gap: 8, paddingBottom: 16, paddingHorizontal: 20, paddingTop: 12 },
+    filterChip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, backgroundColor: NAVY_INPUT, borderWidth: 1, borderColor: NAVY_BORDER },
+    activeFilterChip: { backgroundColor: GOLD, borderColor: GOLD, shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+    filterText: { fontSize: 10, fontWeight: '800', color: TEXT_MUTED, letterSpacing: 1, textTransform: 'uppercase' },
+    activeFilterText: { color: NAVY, fontWeight: '900' },
+    gridContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 160 },
+    gridColumn: { justifyContent: 'space-between', marginBottom: 16 },
+    productCard: { borderRadius: 24, padding: 10, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 5 },
+    imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', position: 'relative', marginBottom: 12, backgroundColor: NAVY_INPUT },
+    productImage: { position: 'absolute', width: '100%', height: '100%' },
+    favoriteButton: { position: 'absolute', top: 8, right: 8, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    productInfo: { paddingHorizontal: 4 },
+    productName: { fontSize: 14, fontWeight: '800', color: TEXT_PRIMARY, marginBottom: 8, letterSpacing: -0.2 },
+    weightRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, paddingVertical: 8, borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    weightItem: { alignItems: 'center' },
+    weightLabel: { fontSize: 8, fontWeight: '900', color: GOLD, letterSpacing: 1, marginBottom: 2 },
+    weightValue: { fontSize: 13, fontWeight: '700', color: TEXT_PRIMARY },
+    materialRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    materialDot: { width: 6, height: 6, borderRadius: 3, borderWidth: 1, borderColor: GOLD_LIGHT },
+    materialText: { fontSize: 11, fontWeight: '600', color: TEXT_MUTED },
+    emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(201,168,76,0.05)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(201,168,76,0.1)' },
+    browseButton: { marginTop: 32, borderRadius: 16, overflow: 'hidden', shadowColor: GOLD, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 },
+    browseButtonGradient: { paddingHorizontal: 32, paddingVertical: 16, justifyContent: 'center', alignItems: 'center' },
+    browseButtonText: { color: NAVY, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
 });

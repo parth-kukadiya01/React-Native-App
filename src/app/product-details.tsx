@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
@@ -6,58 +6,62 @@ import {
     ScrollView,
     Image,
     TouchableOpacity,
-
     Dimensions,
+    ActivityIndicator,
+    Alert,
+    StatusBar,
+    TextInput,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
-import GlassView from '../components/GlassView';
-import { StatusBar } from 'react-native';
 import Icon from '../components/Icon';
+import MessageModal from '../components/MessageModal';
+import CartToast from '../components/CartToast';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../constants/Colors';
+import { B2B } from '../constants/Colors';
 import { cartService } from '../services/cartService';
 import { useCart } from '../context/CartContext';
 import { productService } from '../services/productService';
 import { recentlyViewedService } from '../services/recentlyViewedService';
-import { Alert, ActivityIndicator } from 'react-native';
-import ScreenHeader from '../components/ScreenHeader';
 import { getImageUrl } from '../constants/api';
 import ImageView from "react-native-image-viewing";
 
+const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED, GOLD_DIM, GOLD_BORDER, NAVY_MID } = B2B;
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const MATERIALS = ['Yellow Gold', 'Rose Gold', 'White Gold'];
-const PURITY = ['14k', '18k', '22k'];
+const MATERIALS = ['Yellow Gold', 'Rose Gold'];
 
-const getDynamicSizes = (productName: string = ''): string[] => {
-    const name = productName.toLowerCase();
-
-    if (name.includes('bracelet') || name.includes('breslet') || name.includes('bangle') || name.includes('bangal')) {
-        return ['6.5', '7', '7.5', '8'];
+const getDynamicSizes = (productName: string = '', categoryName: string = ''): string[] => {
+    const name = (productName + ' ' + categoryName).toLowerCase();
+    if (name.includes('bangle') || name.includes('bangal') || name.includes('kada') || name.includes('kangan')) {
+        return ['2.2', '2.4', '2.6', '2.8', '2.10'];
     }
-    if (name.includes('necklace') || name.includes('nackless')) {
-        return ['110', '111', '112', '113', '114', '115'];
+    if (name.includes('bracelet') || name.includes('breslet')) {
+        return ['6.0', '6.5', '7.0', '7.5', '8.0'];
     }
-    if (name.includes('pendant') || name.includes('earring') || name.includes('pandal')) {
-        return []; // No size for pendants or earrings
+    if (name.includes('necklace') || name.includes('nackless') || name.includes('choker')) {
+        return ['14', '16', '18', '20', '22'];
     }
     if (name.includes('chain')) {
-        return ['18', '19', '20'];
+        return ['16', '18', '20', '22', '24'];
     }
     if (name.includes('kadali')) {
-        return ['2.2', '2.4', '2.6', '2.8', '2.10', '2.12', '2.14'];
+        return ['1.2', '1.4', '1.6', '1.8', '1.10'];
     }
-    // Default (Ring)
-    return Array.from({ length: 34 }, (_, i) => (i + 3).toString());
+    if (name.includes('pendant') || name.includes('earring') || name.includes('top') || name.includes('pandal')) {
+        return [];
+    }
+    return Array.from({ length: 23 }, (_, i) => (i + 5).toString());
 };
 
-const getDynamicSizeLabel = (productName: string = ''): string => {
-    const name = productName.toLowerCase();
-    if (name.includes('bracelet') || name.includes('breslet') || name.includes('bangle') || name.includes('bangal')) return 'BRACELET SIZE';
-    if (name.includes('necklace') || name.includes('nackless')) return 'NECKLACE SIZE';
-    if (name.includes('chain')) return 'CHAIN SIZE';
+const getDynamicSizeLabel = (productName: string = '', categoryName: string = ''): string => {
+    const name = (productName + ' ' + categoryName).toLowerCase();
+    if (name.includes('bangle') || name.includes('bangal') || name.includes('kada') || name.includes('kankan') || name.includes('kangan')) return 'SIZE (INCHES)';
+    if (name.includes('bracelet') || name.includes('breslet')) return 'BRACELET SIZE';
+    if (name.includes('necklace') || name.includes('nackless') || name.includes('choker')) return 'LENGTH (INCHES)';
+    if (name.includes('chain')) return 'CHAIN LENGTH';
     if (name.includes('kadali')) return 'KADALI SIZE';
     return 'RING SIZE';
 };
@@ -72,11 +76,30 @@ export default function ProductDetailsScreen() {
     const [selectedMaterial, setSelectedMaterial] = useState('');
     const [selectedPurity, setSelectedPurity] = useState('');
     const [selectedSize, setSelectedSize] = useState('');
+    const [note, setNote] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [addingToCart, setAddingToCart] = useState(false);
-    const { updateCartCount } = useCart();
 
-    // Image Viewer State
+    console.log("product", product);
+
+    // Cart Toast state (replaces the 'Added to Cart' popup)
+    const [showCartToast, setShowCartToast] = useState(false);
+
+    const [modalConfig, setModalConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+        onClose?: () => void;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'success'
+    });
+
+    const { cartCount, updateCartCount } = useCart();
+
     const [isVisible, setIsVisible] = useState(false);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
 
@@ -88,24 +111,21 @@ export default function ProductDetailsScreen() {
                 const res = await productService.getProductDetails(id as string);
                 const data = res.data.data;
                 setProduct(data);
-                // Try to infer string fallback from data, otherwise use standard 'Yellow Gold'
                 let defaultMat = 'Yellow Gold';
                 if (data.materials?.[0]) {
                     const matStr = data.materials[0].toLowerCase();
                     if (matStr.includes('rose')) defaultMat = 'Rose Gold';
-                    else if (matStr.includes('white')) defaultMat = 'White Gold';
                 }
                 setSelectedMaterial(defaultMat);
                 setSelectedPurity(data.availablePurity?.[0] || '18k');
-                const dynamicSizes = getDynamicSizes(data?.name || name);
+                const dynamicSizes = getDynamicSizes(data?.name || name, data?.category?.name || '');
                 setSelectedSize(data.availableSizes?.[0] || dynamicSizes[0] || '');
                 setLoading(false);
-                // Track this product view
                 recentlyViewedService.trackView(id as string).catch(() => { });
             } catch (error: any) {
                 console.error('Error fetching product details:', error);
                 const msg = error.response?.data?.message || 'Failed to load product details';
-                Alert.alert('Error', msg);
+                setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
                 setLoading(false);
             }
         };
@@ -114,311 +134,307 @@ export default function ProductDetailsScreen() {
 
     const handleAddToCart = async () => {
         if (!id) {
-            Alert.alert('Error', 'Product ID missing');
+            setModalConfig({ visible: true, title: 'Error', message: 'Product ID missing', type: 'error' });
             return;
         }
 
         setAddingToCart(true);
         try {
-            await cartService.addToCart(id as string, quantity);
+            await cartService.addToCart(id as string, quantity, {
+                material: selectedMaterial,
+                purity: selectedPurity,
+                size: selectedSize,
+                note: note.trim()
+            });
             await updateCartCount();
-            Alert.alert(
-                'Success',
-                'Product added to cart successfully',
-                [
-                    { text: 'Continue Shopping', style: 'cancel' },
-                    { text: 'View Cart', onPress: () => navigation.navigate('cart' as any) }
-                ]
-            );
+            // Show non-blocking toast instead of a blocking popup
+            setShowCartToast(true);
         } catch (error: any) {
             const message = error.response?.data?.message || 'Failed to add to cart';
-            Alert.alert('Error', message);
+            setModalConfig({ visible: true, title: 'Error', message: message, type: 'error' });
         } finally {
             setAddingToCart(false);
         }
     };
 
+    const productImages = product?.images && product.images.length > 0 ? product.images : [image];
+
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+        <View style={[styles.container, { paddingBottom: insets.bottom + 32 }]}>
+            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
 
             <LinearGradient
-                colors={Colors.gradient}
-                locations={Colors.locations}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                colors={[NAVY, NAVY_MID, '#09101d']}
                 style={styles.background}
             />
 
-            <ScreenHeader
-                showBack
-                title="Product Detail"
-                rightElement={
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Icon name="more-horiz" size={24} color="#1a1a1a" />
-                    </TouchableOpacity>
-                }
+            <MessageModal
+                visible={modalConfig.visible}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                type={modalConfig.type}
+                onClose={() => {
+                    setModalConfig(prev => ({ ...prev, visible: false }));
+                    if (modalConfig.onClose) modalConfig.onClose();
+                }}
             />
 
+            {/* Non-blocking Cart Toast */}
+            <CartToast
+                visible={showCartToast}
+                cartCount={cartCount}
+                onViewCart={() => navigation.navigate('cart' as any)}
+                onDismiss={() => setShowCartToast(false)}
+            />
+
+            {/* Premium Header */}
+            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+                <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
+                    <Icon name="arrow-back-ios" size={20} color={GOLD} style={{ marginLeft: 6 }} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>PRODUCT PROFILE</Text>
+                <TouchableOpacity style={styles.headerButton}>
+                    <Icon name="more-horiz" size={24} color={GOLD} />
+                </TouchableOpacity>
+            </View>
+
             {loading ? (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color="#1e293b" />
+                <View style={styles.loaderContainer}>
+                    <ActivityIndicator size="large" color={GOLD} />
+                    <Text style={styles.loaderText}>Retrieving Specifications...</Text>
                 </View>
             ) : (
                 <>
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                        {/* Image Gallery — Carousel & Zoom */}
+                        {/* Image Showcase */}
                         <View style={styles.imageContainer}>
-                            <GlassView blurType="light" blurAmount={30} style={styles.imageWrapper}>
+                            <View style={styles.imageCard}>
                                 <ScrollView
                                     horizontal
                                     pagingEnabled
-                                    snapToInterval={SCREEN_WIDTH - 64} // W - (24*2 container padding) - (8*2 wrapper padding)
+                                    snapToInterval={SCREEN_WIDTH - 40}
                                     decelerationRate="fast"
                                     showsHorizontalScrollIndicator={false}
                                     onMomentumScrollEnd={(e) => {
-                                        const newIndex = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 64));
+                                        const newIndex = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 40));
                                         setActiveImageIndex(newIndex);
                                     }}
-                                    contentContainerStyle={{ alignItems: 'center' }}
                                 >
-                                    {(product?.images && product.images.length > 0 ? product.images : [product?.image || image]).map((img: string, index: number) => (
+                                    {productImages.map((img: string, index: number) => (
                                         <TouchableOpacity
                                             key={index}
                                             activeOpacity={0.9}
                                             onPress={() => setIsVisible(true)}
-                                            style={{ width: SCREEN_WIDTH - 64, height: SCREEN_WIDTH - 64, alignItems: 'center', justifyContent: 'center' }}
+                                            style={styles.imageTouch}
                                         >
                                             <Image
                                                 source={{ uri: getImageUrl(img) }}
-                                                style={styles.productImage}
+                                                style={styles.mainImage}
                                                 resizeMode="contain"
                                             />
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
 
-                                <View style={styles.paginationDots}>
-                                    {(product?.images && product.images.length > 0 ? product.images : [image]).map((_: any, index: number) => (
-                                        <View
-                                            key={index}
-                                            style={[
-                                                styles.dot,
-                                                activeImageIndex === index && styles.activeDot
-                                            ]}
-                                        />
+                                <View style={styles.paginationRow}>
+                                    {productImages.map((_: any, index: number) => (
+                                        <View key={index} style={[styles.dot, activeImageIndex === index && styles.activeDot]} />
                                     ))}
                                 </View>
 
-                                <View style={styles.zoomHint}>
-                                    <Icon name="fullscreen" size={14} color="#94a3b8" />
-                                    <Text style={styles.zoomHintText}>Tap to zoom</Text>
-                                </View>
-                            </GlassView>
+                                <TouchableOpacity style={styles.zoomAffordance} onPress={() => setIsVisible(true)}>
+                                    <Icon name="fullscreen" size={20} color={GOLD} />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <ImageView
-                            images={(product?.images && product.images.length > 0 ? product.images : [product?.image || image]).map((img: string) => ({ uri: getImageUrl(img) }))}
+                            images={productImages.map((img: string) => ({ uri: getImageUrl(img) }))}
                             imageIndex={activeImageIndex}
                             visible={isVisible}
                             onRequestClose={() => setIsVisible(false)}
-                            swipeToCloseEnabled={true}
-                            doubleTapToZoomEnabled={true}
-                            FooterComponent={({ imageIndex }) => (
-                                <View style={styles.footerContainer}>
-                                    <Text style={styles.footerText}>{`${imageIndex + 1} / ${(product?.images?.length || 1)}`}</Text>
-                                </View>
-                            )}
                         />
 
-                        {/* Product Info */}
-                        <View style={styles.infoSection}>
-                            <View style={styles.badgeRow}>
-                                <View style={styles.stockBadge}>
-                                    <Text style={styles.stockText}>{product?.stockStatus || 'IN STOCK'}</Text>
+                        {/* Title & SKU Area */}
+                        <View style={styles.metaRow}>
+                            <View style={styles.titleCol}>
+                                <Text style={styles.productName}>{product?.name || name}</Text>
+                                <View style={styles.refBadge}>
+                                    <Text style={styles.refText}>IDENTIFIER: {product?.sku || ref || 'N/A'}</Text>
                                 </View>
-                                {product?.sku || ref ? <Text style={styles.skuText}>REF: {product?.sku || ref}</Text> : null}
                             </View>
-                            <Text style={styles.productTitle}>{product?.name || name}</Text>
+                            <View style={styles.stockStatus}>
+                                <View style={styles.pulse} />
+                                <Text style={styles.stockLabel}>LIVE STOCK</Text>
+                            </View>
                         </View>
 
-                        {/* Details Tables */}
-                        <View style={styles.detailsSection}>
-                            <GlassView blurType="light" blurAmount={40} style={styles.detailsCard}>
-                                <View style={styles.detailsHeader}>
-                                    <Text style={styles.detailsHeaderText}>PRODUCT DETAILS</Text>
+                        {/* Technical Specifications */}
+                        <View style={styles.specSection}>
+                            <Text style={styles.sectionLabel}>Product Specifications</Text>
+                            <View style={styles.specGrid}>
+                                <View style={styles.specCard}>
+                                    <Text style={styles.specSmall}>NET WT</Text>
+                                    <Text style={styles.specLarge}>{product?.netWt || netWt}g</Text>
                                 </View>
-                                <View style={styles.detailsBody}>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Metal Type</Text>
-                                        <Text style={styles.detailValue}>{selectedMaterial || 'Gold'}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Net Weight</Text>
-                                        <Text style={styles.detailValue}>{product?.netWt || netWt} GM</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Gross Weight</Text>
-                                        <Text style={styles.detailValue}>{product?.grossWt || grossWt} GM</Text>
-                                    </View>
+                                <View style={styles.specCard}>
+                                    <Text style={styles.specSmall}>GROSS WT</Text>
+                                    <Text style={styles.specLarge}>{product?.grossWt || grossWt}g</Text>
                                 </View>
+                                <View style={styles.specCard}>
+                                    <Text style={styles.specSmall}>PURITY</Text>
+                                    <Text style={styles.specLarge}>{product?.materials?.[0] || '18K'}</Text>
+                                </View>
+                            </View>
 
-                                <View style={[styles.detailsHeader, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
-                                    <Text style={styles.detailsHeaderText}>DIAMOND DETAILS</Text>
+                            <View style={styles.infoCard}>
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>METAL COMPOSITION</Text>
+                                    <Text style={styles.infoValue}>{product?.materials?.[0] || 'GOLD'}</Text>
                                 </View>
-                                <View style={styles.detailsBody}>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Carat Weight</Text>
-                                        <Text style={styles.detailValue}>{product?.diamondDetails?.caratWeight || '0.00 CT'}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Clarity</Text>
-                                        <Text style={styles.detailValue}>{product?.diamondDetails?.clarity || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Color Grade</Text>
-                                        <Text style={styles.detailValue}>{product?.diamondDetails?.colorGrade || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Cut Grade</Text>
-                                        <Text style={styles.detailValue}>{product?.diamondDetails?.cutGrade || 'N/A'}</Text>
-                                    </View>
+                                <View style={styles.divider} />
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>CATEGORY</Text>
+                                    <Text style={styles.infoValue}>{product?.category?.name || 'PREMIUM CATALOG'}</Text>
                                 </View>
-                            </GlassView>
+                                {product?.diamondDetails?.caratWeight && (
+                                    <>
+                                        <View style={styles.divider} />
+                                        <View style={styles.infoRow}>
+                                            <Text style={styles.infoLabel}>DIAMOND CARAT</Text>
+                                            <Text style={styles.infoValue}>{product.diamondDetails.caratWeight} CT</Text>
+                                        </View>
+                                    </>
+                                )}
+                            </View>
                         </View>
 
-                        {/* Selectors */}
-                        <View style={styles.selectorsSection}>
-                            {/* Material */}
-                            <GlassView blurType="light" blurAmount={30} style={styles.selectorCard}>
-                                <Text style={styles.selectorLabel}>MATERIAL</Text>
-                                <View style={styles.selectorRow}>
-                                    {MATERIALS.map((material: string) => (
-                                        <TouchableOpacity
-                                            key={material}
-                                            style={[styles.selectorButton, selectedMaterial === material && styles.selectorButtonActive]}
-                                            onPress={() => setSelectedMaterial(material)}
-                                        >
-                                            <Text style={[styles.selectorButtonText, selectedMaterial === material && styles.selectorButtonTextActive]}>
-                                                {material.toUpperCase()}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
+                        {/* Configuration Selectors */}
+                        <View style={styles.configSection}>
+                            <Text style={styles.sectionLabel}>CUSTOMIZE SPECIFICATIONS</Text>
+
+                            <View style={styles.configCard}>
+                                <Text style={styles.configTitle}>MATERIAL FINISH</Text>
+                                <View style={styles.optionsRow}>
+                                    {MATERIALS.map(m => {
+                                        const active = selectedMaterial === m;
+                                        return (
+                                            <TouchableOpacity
+                                                key={m}
+                                                style={[styles.optionBtn, active && styles.optionBtnActive]}
+                                                onPress={() => setSelectedMaterial(m)}
+                                            >
+                                                <Text style={[styles.optionText, active && styles.optionTextActive]}>{m.split(' ')[0]}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
                                 </View>
-                            </GlassView>
+                            </View>
 
-                            {/* Purity */}
-                            <GlassView blurType="light" blurAmount={30} style={styles.selectorCard}>
-                                <Text style={styles.selectorLabel}>PURITY</Text>
-                                <View style={styles.selectorRow}>
-                                    {(product?.availablePurity && product.availablePurity.length > 0 ? product.availablePurity : PURITY).map((purity: string) => (
-                                        <TouchableOpacity
-                                            key={purity}
-                                            style={[styles.selectorButton, selectedPurity === purity && styles.selectorButtonActive]}
-                                            onPress={() => setSelectedPurity(purity)}
-                                        >
-                                            <Text style={[styles.selectorButtonText, selectedPurity === purity && styles.selectorButtonTextActive]}>
-                                                {purity.toUpperCase()}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
+                            <View style={styles.configCard}>
+                                <Text style={styles.configTitle}>GOLD PURITY</Text>
+                                <View style={styles.optionsRow}>
+                                    {(product?.availablePurity && product.availablePurity.length > 0
+                                        ? product.availablePurity
+                                        : ['18k', '22k']
+                                    ).map((p: string) => {
+                                        const active = (selectedPurity || '').toLowerCase() === p.toLowerCase();
+                                        return (
+                                            <TouchableOpacity
+                                                key={p}
+                                                style={[styles.optionBtn, active && styles.optionBtnActive]}
+                                                onPress={() => setSelectedPurity(p)}
+                                            >
+                                                <Text style={[styles.optionText, active && styles.optionTextActive]}>{p.toUpperCase()}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
                                 </View>
-                            </GlassView>
+                            </View>
 
-                            {/* Size */}
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sizeScroll}>
-                                {(() => {
-                                    const availableSizes = product?.availableSizes && product.availableSizes.length > 0 ? product.availableSizes : getDynamicSizes(product?.name || name);
-
-                                    if (!availableSizes || availableSizes.length === 0) {
-                                        return null; // Don't render sizes if there are none (like earrings/pendants)
-                                    }
-
-                                    return (
-                                        <GlassView blurType="light" blurAmount={30} style={[styles.selectorCard, { width: '100%' }]}>
-                                            <View style={styles.sizeHeader}>
-                                                <Text style={styles.selectorLabel}>{getDynamicSizeLabel(product?.name || name)}</Text>
-                                                <TouchableOpacity>
-                                                    <Text style={styles.sizeGuideText}>SIZE GUIDE</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sizeScroll}>
-                                                {availableSizes.map((size: string) => (
+                            {(() => {
+                                const sizes = getDynamicSizes(product?.name || name, product?.category?.name || '');
+                                if (sizes.length === 0) return null;
+                                return (
+                                    <View style={styles.configCard}>
+                                        <View style={styles.sizeHeader}>
+                                            <Text style={styles.configTitle}>{getDynamicSizeLabel(product?.name || name, product?.category?.name || '')}</Text>
+                                            <TouchableOpacity><Text style={styles.guideText}>SIZE GUIDE</Text></TouchableOpacity>
+                                        </View>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sizeScroll}>
+                                            {sizes.map(s => {
+                                                const active = selectedSize === s;
+                                                return (
                                                     <TouchableOpacity
-                                                        key={size}
-                                                        style={[styles.sizeButton, selectedSize === size && styles.selectorButtonActive]}
-                                                        onPress={() => setSelectedSize(size)}
+                                                        key={s}
+                                                        style={[styles.sizeBtn, active && styles.sizeBtnActive]}
+                                                        onPress={() => setSelectedSize(s)}
                                                     >
-                                                        <Text style={[styles.selectorButtonText, selectedSize === size && styles.selectorButtonTextActive]}>
-                                                            {size}
-                                                        </Text>
+                                                        <Text style={[styles.sizeText, active && styles.sizeTextActive]}>{s}</Text>
                                                     </TouchableOpacity>
-                                                ))}
-                                            </ScrollView>
-                                        </GlassView>
-                                    );
-                                })()}
-                            </ScrollView>
-                        </View>
+                                                );
+                                            })}
+                                        </ScrollView>
+                                    </View>
+                                );
+                            })()}
 
+                            <View style={styles.configCard}>
+                                <Text style={styles.configTitle}>SPECIAL INSTRUCTIONS</Text>
+                                <TextInput
+                                    style={styles.noteInput}
+                                    placeholder="Add custom notes here..."
+                                    placeholderTextColor={TEXT_MUTED}
+                                    value={note}
+                                    onChangeText={setNote}
+                                    multiline
+                                />
+                            </View>
+                        </View>
                     </ScrollView>
 
-                    {/* Bottom Action Bar */}
-                    <View style={[styles.bottomBarContainer, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-                        <GlassView blurType="light" blurAmount={60} style={styles.bottomBar}>
-                            <View style={styles.actionRow}>
-
-                                <View style={styles.quantityControl}>
-                                    <TouchableOpacity
-                                        style={styles.quantityBtn}
-                                        onPress={() => setQuantity(Math.max(1, quantity - 1))}
-                                    >
-                                        <Icon name="remove" size={18} color="rgba(26, 26, 26, 0.6)" />
-                                    </TouchableOpacity>
-                                    <Text style={styles.quantityText}>{quantity}</Text>
-                                    <TouchableOpacity
-                                        style={styles.quantityBtn}
-                                        onPress={() => setQuantity(quantity + 1)}
-                                    >
-                                        <Icon name="add" size={18} color="rgba(26, 26, 26, 0.6)" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                <TouchableOpacity
-                                    style={styles.addToCartBtn}
-                                    onPress={handleAddToCart}
-                                    disabled={addingToCart}
-                                >
-                                    <LinearGradient
-                                        colors={['#1a1a1a', '#333333']}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                        style={{
-                                            position: 'absolute',
-                                            left: 0,
-                                            right: 0,
-                                            top: 0,
-                                            bottom: 0,
-                                        }}
-                                    />
-                                    {addingToCart ? (
-                                        <ActivityIndicator color="white" />
-                                    ) : (
-                                        <>
-                                            <Icon name="shopping-bag" size={20} color="rgba(255,255,255,0.8)" />
-                                            <Text style={styles.addToCartText}>ADD TO CART</Text>
-                                        </>
-                                    )}
+                    {/* Transactional Action Bar */}
+                    <View style={[styles.actionBarContainer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+                        {/* <LinearGradient
+                            colors={['transparent', 'rgba(24, 34, 55, 0.9)', NAVY]}
+                            style={styles.barShadow}
+                        /> */}
+                        <View style={styles.actionBar}>
+                            <View style={styles.qtyBox}>
+                                <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={styles.qtyBtn}>
+                                    <Icon name="remove" size={16} color={GOLD} />
                                 </TouchableOpacity>
-
+                                <Text style={styles.qtyVal}>{quantity}</Text>
+                                <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.qtyBtn}>
+                                    <Icon name="add" size={16} color={GOLD} />
+                                </TouchableOpacity>
                             </View>
 
-                            <View style={styles.wholesaleBadge}>
-                                <Icon name="verified" size={14} color="rgba(5, 150, 105, 0.7)" />
-                                <Text style={styles.wholesaleText}>WHOLESALE STOCK CONFIRMED</Text>
-                            </View>
-                        </GlassView>
+                            <TouchableOpacity
+                                style={styles.primaryBtn}
+                                onPress={handleAddToCart}
+                                disabled={addingToCart}
+                            >
+                                <LinearGradient
+                                    colors={[GOLD_DARK, GOLD, GOLD_DARK]}
+                                    style={StyleSheet.absoluteFillObject}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                />
+                                {addingToCart ? (
+                                    <ActivityIndicator color={NAVY} />
+                                ) : (
+                                    <>
+                                        <Icon name="add-shopping-cart" size={20} color={NAVY} />
+                                        <Text style={styles.btnText}>ADD TO CART</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                        {/* <View style={styles.trustRow}>
+                            <Icon name="verified" size={12} color={GOLD_LIGHT} />
+                            <Text style={styles.trustText}>SECURE WHOLESALE SETTLEMENT READY</Text>
+                        </View> */}
                     </View>
                 </>
             )}
@@ -427,353 +443,198 @@ export default function ProductDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
+    container: { flex: 1, backgroundColor: NAVY },
+    background: { ...StyleSheet.absoluteFillObject },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
     },
-    background: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    iconButton: {
+    headerButton: {
         width: 44,
         height: 44,
+        borderRadius: 14,
+        backgroundColor: NAVY_CARD,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
     },
     headerTitle: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '900',
-        color: '#475569',
+        color: GOLD,
         letterSpacing: 2,
-        textTransform: 'uppercase',
     },
-    scrollContent: {
-        paddingBottom: 140, // Space for bottom bar
-        paddingTop: 16,
-    },
-    imageContainer: {
-        paddingHorizontal: 24, // Matched with other sections
-        marginBottom: 32,
-    },
-    imageWrapper: {
+    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 20 },
+    loaderText: { color: GOLD_LIGHT, fontSize: 13, fontWeight: '700', letterSpacing: 1 },
+    scrollContent: { paddingBottom: 56, marginBottom: 12 },
+    imageContainer: { paddingHorizontal: 20, marginTop: 10 },
+    imageCard: {
         width: '100%',
-        aspectRatio: 1,
-        borderRadius: 32, // 3xl
-        padding: 8,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        aspectRatio: 0.8,
+        backgroundColor: NAVY_CARD,
+        borderRadius: 30,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.1,
-        shadowRadius: 32,
+        borderColor: NAVY_BORDER,
         overflow: 'hidden',
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
     },
-    productImage: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 24, // 2xl
-    },
-    zoomHint: {
+    imageTouch: { width: SCREEN_WIDTH - 40, height: '100%', justifyContent: 'center', alignItems: 'center' },
+    mainImage: { width: '85%', height: '85%' },
+    paginationRow: {
         position: 'absolute',
-        top: 16,
-        right: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: 'rgba(255,255,255,0.7)',
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 12,
-    },
-    zoomHintText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#94a3b8',
-    },
-    paginationDots: {
-        position: 'absolute',
-        bottom: 24,
+        bottom: 25,
         left: 0,
         right: 0,
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 8,
+        gap: 6,
     },
-    dot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: 'rgba(26, 26, 26, 0.1)',
-    },
-    activeDot: {
-        backgroundColor: '#1e293b',
-        width: 24,
-    },
-    infoSection: {
-        paddingHorizontal: 24,
-        marginBottom: 32,
-    },
-    badgeRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 16,
-    },
-    stockBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-        backgroundColor: '#f1f5f9',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-    },
-    stockText: {
-        fontSize: 9,
-        fontWeight: '900',
-        color: '#475569',
-        letterSpacing: 1.5,
-        textTransform: 'uppercase',
-    },
-    skuText: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#94a3b8',
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-    },
-    productTitle: {
-        fontSize: 28,
-        fontWeight: '300',
-        color: '#1e293b',
-        letterSpacing: -1,
-        lineHeight: 36,
-    },
-    selectorsSection: {
-        paddingHorizontal: 24,
-        gap: 20,
-        marginBottom: 32,
-    },
-    selectorCard: {
-        borderRadius: 24,
-        padding: 20,
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
-    },
-    selectorLabel: {
-        fontSize: 10,
-        fontWeight: '900',
-        color: '#64748b',
-        letterSpacing: 2, // 0.2em
-        textTransform: 'uppercase',
-        marginBottom: 16,
-    },
-    selectorRow: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    selectorButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 16, // xl
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.4)',
-        alignItems: 'center',
-    },
-    selectorButtonActive: {
-        backgroundColor: '#0f172a',
-        borderColor: '#0f172a',
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    selectorButtonText: {
-        fontSize: 11,
-        fontWeight: '800',
-        color: '#64748b',
-        letterSpacing: 1, // widest
-        textTransform: 'uppercase',
-    },
-    selectorButtonTextActive: {
-        color: '#fff',
-    },
-    sizeHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    sizeGuideText: {
-        fontSize: 10,
-        fontWeight: '900',
-        color: '#6366f1',
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-    },
-    sizeScroll: {
-        gap: 8,
-    },
-    sizeButton: {
-        minWidth: 56,
-        height: 48,
-        borderRadius: 16,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    detailsSection: {
-        paddingHorizontal: 24,
-        marginBottom: 32, // Added spacing between details and selectors
-    },
-    detailsCard: {
-        borderRadius: 32, // 3xl
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
-        overflow: 'hidden',
-    },
-    detailsHeader: {
-        paddingHorizontal: 24,
-        paddingVertical: 16,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.2)',
-    },
-    detailsHeaderText: {
-        fontSize: 11,
-        fontWeight: '900',
-        color: '#475569',
-        letterSpacing: 2, // 0.2em
-        textTransform: 'uppercase',
-    },
-    detailsBody: {
-        padding: 24,
-        gap: 16,
-    },
-    detailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    detailLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#94a3b8',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    detailValue: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#1e293b',
-    },
-    bottomBarContainer: {
+    dot: { width: 6, height: 2, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 1 },
+    activeDot: { width: 20, backgroundColor: GOLD },
+    zoomAffordance: {
         position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: 24,
-    },
-    bottomBar: {
-        borderRadius: 32,
-        padding: 16,
-        backgroundColor: 'rgba(255,255,255,0.8)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.9)',
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: -8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 24,
-    },
-    actionRow: {
-        flexDirection: 'row',
-        gap: 16,
-        alignItems: 'center',
-    },
-    quantityControl: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 4,
-        borderRadius: 20, // 2xl
-        backgroundColor: '#f1f5f9',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        height: 56,
-    },
-    quantityBtn: {
+        top: 20,
+        right: 20,
+        backgroundColor: 'rgba(0,0,0,0.5)',
         width: 40,
-        height: '100%',
+        height: 40,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    quantityText: {
-        width: 24,
-        textAlign: 'center',
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1e293b',
+    metaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        marginTop: 20,
+        alignItems: 'flex-start',
     },
-    addToCartBtn: {
+    titleCol: { flex: 1, marginRight: 15 },
+    productName: { fontSize: 28, fontWeight: '300', color: TEXT_PRIMARY, lineHeight: 36, letterSpacing: -0.5 },
+    refBadge: {
+        backgroundColor: 'rgba(232,201,122,0.05)',
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 6,
+        alignSelf: 'flex-start',
+        marginTop: 10,
+        borderWidth: 0.5,
+        borderColor: 'rgba(232,201,122,0.2)',
+    },
+    refText: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1 },
+    stockStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
+    pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10b981' },
+    stockLabel: { fontSize: 10, fontWeight: '900', color: '#10b981', letterSpacing: 1 },
+    specSection: { paddingHorizontal: 20, marginTop: 24 },
+    sectionLabel: { fontSize: 10, fontWeight: '900', color: GOLD, letterSpacing: 2, marginBottom: 16, marginLeft: 5 },
+    specGrid: { flexDirection: 'row', gap: 12, marginBottom: 15 },
+    specCard: {
         flex: 1,
-        height: 56, // h-14
-        borderRadius: 20, // 2xl
+        backgroundColor: NAVY_CARD,
+        borderRadius: 18,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+    },
+    specSmall: { fontSize: 8, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1, marginBottom: 5 },
+    specLarge: { fontSize: 16, fontWeight: '800', color: TEXT_PRIMARY },
+    infoCard: { backgroundColor: NAVY_CARD, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: NAVY_BORDER },
+    infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
+    infoLabel: { fontSize: 10, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 0.5 },
+    infoValue: { fontSize: 11, fontWeight: '900', color: GOLD_LIGHT, letterSpacing: 0.5 },
+    divider: { height: 1, backgroundColor: NAVY_BORDER, marginVertical: 12 },
+    configSection: { paddingHorizontal: 20, marginTop: 24 },
+    configCard: {
+        backgroundColor: NAVY_CARD,
+        borderRadius: 20,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        marginBottom: 15,
+    },
+    configTitle: { fontSize: 10, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1, marginBottom: 18 },
+    optionsRow: { flexDirection: 'row', gap: 10 },
+    optionBtn: {
+        flex: 1,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: NAVY_INPUT,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    optionBtnActive: { backgroundColor: GOLD, borderColor: GOLD },
+    optionText: { fontSize: 11, fontWeight: '800', color: TEXT_MUTED, letterSpacing: 1 },
+    optionTextActive: { color: NAVY },
+    sizeHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18 },
+    guideText: { fontSize: 10, fontWeight: '900', color: GOLD, letterSpacing: 1 },
+    sizeScroll: { gap: 8 },
+    sizeBtn: {
+        width: 54,
+        height: 54,
+        borderRadius: 15,
+        backgroundColor: NAVY_INPUT,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    sizeBtnActive: { backgroundColor: GOLD, borderColor: GOLD },
+    sizeText: { fontSize: 13, fontWeight: '800', color: TEXT_MUTED },
+    sizeTextActive: { color: NAVY },
+    noteInput: {
+        height: 80,
+        backgroundColor: NAVY_INPUT,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        color: TEXT_PRIMARY,
+        fontSize: 13,
+        padding: 12,
+        paddingTop: 12,
+        textAlignVertical: 'top',
+    },
+    actionBarContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, backgroundColor: NAVY, paddingTop: 12 },
+    barShadow: { position: 'absolute', top: -100, left: 0, right: 0, height: 100 },
+    actionBar: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(11,18,32,0.98)',
+        borderRadius: 24,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        gap: 10,
+    },
+    qtyBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: NAVY_INPUT,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+    },
+    qtyBtn: { width: 44, height: 56, justifyContent: 'center', alignItems: 'center' },
+    qtyVal: { width: 30, textAlign: 'center', color: TEXT_PRIMARY, fontSize: 16, fontWeight: '800' },
+    primaryBtn: {
+        flex: 1,
+        height: 56,
+        borderRadius: 16,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 12,
-        overflow: 'hidden', // for gradient
-        backgroundColor: '#0f172a',
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
+        overflow: 'hidden',
     },
-    addToCartText: {
-        color: 'white',
-        fontSize: 12,
-        fontWeight: '900',
-        letterSpacing: 2, // 0.2em
-        textTransform: 'uppercase',
-    },
-    wholesaleBadge: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-        marginTop: 16,
-        opacity: 0.6,
-    },
-    wholesaleText: {
-        fontSize: 9,
-        fontWeight: '800',
-        color: '#475569',
-        letterSpacing: 1.5, // 0.15em
-        textTransform: 'uppercase',
-    },
-    footerContainer: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 40
-    },
-    footerText: {
-        fontSize: 16,
-        color: "#FFF",
-        fontWeight: '600',
-    },
+    btnText: { color: NAVY, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
+    trustRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 15 },
+    trustText: { fontSize: 8, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1 },
 });
+

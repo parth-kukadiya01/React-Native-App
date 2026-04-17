@@ -4,9 +4,11 @@ import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getImageUrl } from '../constants/api';
+import { B2B } from '../constants/Colors';
 
 const { width } = Dimensions.get('window');
 const DEFAULT_CARD_WIDTH = (width - 48) / 2;
+const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED } = B2B;
 
 interface ProductCardProps {
     item: any;
@@ -38,6 +40,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ item, width = DEFAULT_CARD_WI
                 <Image
                     source={{ uri: getImageUrl(item.images?.[0] || item.image) }}
                     style={styles.productImage}
+                    resizeMode="contain"
                 />
                 <TouchableOpacity
                     style={styles.favoriteButton}
@@ -46,33 +49,37 @@ const ProductCard: React.FC<ProductCardProps> = ({ item, width = DEFAULT_CARD_WI
                     <Icon
                         name={item.isFavorite ? "favorite" : "favorite-border"}
                         size={18}
-                        color={item.isFavorite ? "#f43f5e" : "#94a3b8"}
+                        color={item.isFavorite ? "#f43f5e" : GOLD}
                     />
                 </TouchableOpacity>
             </View>
 
             <View style={styles.productInfo}>
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.productRef}>Ref: {item.sku || item.ref}</Text>
+                <Text style={styles.productRef}>SKU: {item.sku || item.ref}</Text>
 
                 <View style={styles.materialRow}>
-                    <View style={[styles.materialDot, { backgroundColor: '#f3d7d4' }]} />
-                    <Text style={styles.materialText}>{item.materials?.[0] || 'Gold'}</Text>
+                    <View style={[styles.materialDot, { backgroundColor: GOLD }]} />
+                    <Text style={styles.materialText}>{item.materials?.[0] || item.goldType || 'Fine Gold'}</Text>
                 </View>
 
                 <View style={styles.productDetails}>
                     <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>NET WT</Text>
-                        <Text style={styles.detailValue}>{item.netWt}g</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>GROSS WT</Text>
-                        <Text style={styles.detailValue}>{item.grossWt}g</Text>
+                        <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>NET</Text>
+                            <Text style={styles.detailValue}>{item.netWt}g</Text>
+                        </View>
+                        <View style={styles.divider} />
+                        <View style={styles.detailItem}>
+                            <Text style={styles.detailLabel}>GROSS</Text>
+                            <Text style={styles.detailValue}>{item.grossWt}g</Text>
+                        </View>
                     </View>
                 </View>
 
-                <View style={styles.addToOrderButton}>
-                    <Text style={styles.addToOrderText}>VIEW DETAILS</Text>
+                <View style={styles.viewBadge}>
+                    <Text style={styles.viewBadgeText}>VIEW ITEM</Text>
+                    <Icon name="arrow-forward" size={12} color={NAVY} />
                 </View>
             </View>
         </TouchableOpacity>
@@ -81,21 +88,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ item, width = DEFAULT_CARD_WI
 
 const styles = StyleSheet.create({
     productCard: {
-        backgroundColor: 'rgba(255,255,255,0.3)',
+        backgroundColor: NAVY_CARD,
         borderRadius: 24,
         padding: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
+        borderColor: NAVY_BORDER,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 16,
+        elevation: 5,
     },
     productImageContainer: {
         width: '100%',
         aspectRatio: 1,
-        borderRadius: 20,
+        borderRadius: 18,
         overflow: 'hidden',
         position: 'relative',
         marginBottom: 12,
+        backgroundColor: NAVY_INPUT,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
+        borderColor: 'rgba(255,255,255,0.03)',
     },
     productImage: {
         position: 'absolute',
@@ -109,79 +122,95 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     productInfo: {
-        paddingHorizontal: 4,
+        paddingHorizontal: 2,
     },
     productName: {
         fontSize: 14,
-        fontWeight: 'bold',
-        color: '#0f172a',
+        fontWeight: '800',
+        color: TEXT_PRIMARY,
+        letterSpacing: -0.2,
     },
     productRef: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: '#94a3b8',
+        fontSize: 9,
+        fontWeight: '700',
+        color: TEXT_MUTED,
         marginTop: 2,
         marginBottom: 8,
+        letterSpacing: 0.5,
     },
     materialRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        marginBottom: 4,
+        gap: 6,
+        marginBottom: 10,
     },
     materialDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: 6,
+        height: 6,
+        borderRadius: 3,
         borderWidth: 1,
-        borderColor: 'white',
+        borderColor: GOLD_LIGHT,
     },
     materialText: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '700',
-        color: '#334155',
+        color: GOLD,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     productDetails: {
-        marginTop: 12,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 14,
         paddingVertical: 8,
-        gap: 4,
+        paddingHorizontal: 10,
+        marginBottom: 12,
     },
     detailRow: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
     },
-    detailLabel: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: '#94a3b8',
-        textTransform: 'uppercase',
-    },
-    detailValue: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: '#334155',
-    },
-    addToOrderButton: {
-        marginTop: 12,
-        backgroundColor: '#0f172a',
-        paddingVertical: 10,
-        borderRadius: 12,
+    detailItem: {
+        flex: 1,
         alignItems: 'center',
     },
-    addToOrderText: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: '800',
+    divider: {
+        width: 1,
+        height: 12,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    detailLabel: {
+        fontSize: 7,
+        fontWeight: '900',
+        color: TEXT_MUTED,
+        letterSpacing: 0.8,
+        marginBottom: 2,
+    },
+    detailValue: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: TEXT_PRIMARY,
+    },
+    viewBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: GOLD,
+        paddingVertical: 8,
+        borderRadius: 12,
+        gap: 4,
+    },
+    viewBadgeText: {
+        color: NAVY,
+        fontSize: 9,
+        fontWeight: '900',
         letterSpacing: 1,
     },
 });

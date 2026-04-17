@@ -62,6 +62,12 @@ export const loginUser = createAsyncThunk(
             const user: AuthUser | null = userStr ? JSON.parse(userStr) : null;
             return { token, user };
         } catch (error: any) {
+            if (error?.response?.data?.errors) {
+                return rejectWithValue({
+                    message: error.response.data.message,
+                    errors: error.response.data.errors
+                });
+            }
             const message =
                 error?.response?.data?.message || 'Invalid credentials. Please try again.';
             return rejectWithValue(message);

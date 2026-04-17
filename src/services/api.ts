@@ -45,6 +45,13 @@ console.log('API base URL:', API_BASE_URL);
 // Add a request interceptor to add the JWT token to headers
 api.interceptors.request.use(
     async (config) => {
+        console.log("📤 API Request:", {
+            url: config.url,
+            method: config.method,
+            headers: config.headers,
+            params: config.params,
+            data: config.data,
+        });
         try {
             const token = await storage.getItem('userToken');
             if (token) {
@@ -56,28 +63,36 @@ api.interceptors.request.use(
         return config;
     },
     (error) => {
+        console.error("❌ API Request Error:", error);
         return Promise.reject(error);
     }
 );
 
 // Add a response interceptor for error handling and auto-redirect to login
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        console.log("✅ API Response:", {
+            url: response.config.url,
+            method: response.config.method,
+            status: response.status,
+            data: response.data,
+        });
+        return response;
+    },
     async (error: AxiosError) => {
         if (error.response) {
-            const status = error.response.status;
-
-            // 401 Unauthorized → clear session & redirect to login
-            // 403 Forbidden is removed from auto-logout to allow handling permission errors in UI
-            if (status === 401) {
-                console.warn(`Auth error (${status}) - clearing session`);
-                await handleAuthError();
-            }
+            console.error("❌ API Response Error:", {
+                url: error.config?.url,
+                status: error.response.status,
+                data: error.response.data,
+            });
         } else if (error.request) {
-            // Network error - log but don't crash
-            console.warn('Network error - server may be unreachable');
+            console.error("⚠️ No Response Received:", error.request);
+        } else {
+            console.error("❌ Request Setup Error:", error.message);
         }
         return Promise.reject(error);
+
     }
 );
 

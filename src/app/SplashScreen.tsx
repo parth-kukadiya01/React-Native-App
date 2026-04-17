@@ -11,6 +11,9 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'react-native-linear-gradient';
+import { B2B } from '../constants/Colors';
+
+const { GOLD, NAVY, NAVY_MID } = B2B;
 
 const SplashScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -46,7 +49,7 @@ const SplashScreen: React.FC = () => {
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       <LinearGradient
-        colors={['#13383c', '#20575D', '#0d2629']}
+        colors={[NAVY, NAVY_MID, '#09101d']}
         style={StyleSheet.absoluteFillObject}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -82,7 +85,7 @@ const SplashScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#20575D',
+    backgroundColor: NAVY,
   } as ViewStyle,
   contentContainer: {
     flex: 1,
@@ -100,7 +103,7 @@ const styles = StyleSheet.create({
   svText: {
     fontSize: 52,
     fontWeight: '800',
-    color: '#D4AF37', // Elegant gold color
+    color: GOLD, // Elegant gold color
     letterSpacing: 2,
     marginRight: 10,
     textShadowColor: 'rgba(0, 0, 0, 0.4)',
@@ -128,7 +131,7 @@ const styles = StyleSheet.create({
     height: 2,
     marginTop: 40,
     borderRadius: 1,
-    backgroundColor: '#D4AF37',
+    backgroundColor: GOLD,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,

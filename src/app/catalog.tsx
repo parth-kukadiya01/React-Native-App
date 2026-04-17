@@ -13,14 +13,12 @@ import {
     Alert,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
-import GlassView from '../components/GlassView';
 import { StatusBar } from 'react-native';
 import Icon from '../components/Icon';
-// import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../constants/Colors';
+import { B2B } from '../constants/Colors';
 import { useCart } from '../context/CartContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { productService } from '../services/productService';
@@ -29,6 +27,7 @@ import { getImageUrl } from '../constants/api';
 import { useResponsive } from '../hooks/useResponsive';
 import BottomNav from '../components/BottomNav';
 
+const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED, GOLD_DIM, GOLD_BORDER, NAVY_MID } = B2B;
 
 export default function CatalogScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -38,7 +37,6 @@ export default function CatalogScreen() {
     const { width } = useResponsive();
     const CARD_WIDTH = (width - 48) / 2;
 
-    const [activeTab, setActiveTab] = useState('Catalog');
     const [activeFilter, setActiveFilter] = useState('All');
     const [activeFilterId, setActiveFilterId] = useState<string | null>(null);
     const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
@@ -47,16 +45,13 @@ export default function CatalogScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const { cartCount, updateCartCount } = useCart();
 
-    // Refine modal state
     const [showRefine, setShowRefine] = useState(false);
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState('desc');
 
-    // Keep a ref to always have the latest route.params in our focusEffect callback
     const routeParamsRef = useRef(route.params);
     routeParamsRef.current = route.params;
 
-    // This ref lets us always call the latest fetchProducts from inside useFocusEffect
     const sortRef = useRef({ sortBy, sortOrder });
     sortRef.current = { sortBy, sortOrder };
 
@@ -77,25 +72,24 @@ export default function CatalogScreen() {
             setLoading(false);
         }
     }, []);
-
     useFocusEffect(
         useCallback(() => {
+            console.log("categoryId", categoryId);
             updateCartCount();
-            // Always read freshest params via ref — avoids stale closure
             const params: any = routeParamsRef.current || {};
-            const catId: string | null = params.categoryId || null;
+            const catId: string | null = params.categoryId || activeFilterId || null;
             const catName: string = params.categoryName || 'All';
             setActiveFilterId(catId);
             setActiveFilter(catName);
+            console.log("catId", catId);
             fetchProducts(catId);
-        }, [fetchProducts])
+        }, [categoryId, sortBy, sortOrder])
     );
 
-    // Re-fetch when sort changes (user hits Refine)
-    useEffect(() => {
-        fetchProducts(activeFilterId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sortBy, sortOrder]);
+    // useEffect(() => {
+    //     console.log("sortBy", sortBy);
+    //     fetchProducts(activeFilterId);
+    // }, [sortBy, sortOrder]);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -125,7 +119,6 @@ export default function CatalogScreen() {
             } else {
                 await favoriteService.addFavorite(productId);
             }
-            // Toggle local state for instant UI feedback
             setFilteredProducts(current =>
                 current.map(p =>
                     (p._id || p.id) === productId
@@ -135,7 +128,6 @@ export default function CatalogScreen() {
             );
         } catch (error: any) {
             const msg = error?.response?.data?.message || 'Failed to update favorite';
-            // If already in favorites (400), just toggle the UI
             if (error?.response?.status === 400 || msg === 'Product already in favorites') {
                 setFilteredProducts(current =>
                     current.map(p =>
@@ -144,16 +136,12 @@ export default function CatalogScreen() {
                             : p
                     )
                 );
-            } else {
-                const msg = error.response?.data?.message || 'Failed to update favorite';
-                Alert.alert('Error', msg);
             }
         }
     };
 
     const handleApplyRefine = () => {
         setShowRefine(false);
-        // Refetch is triggered by sortBy/sortOrder useEffect
     };
 
     const handleSearch = async () => {
@@ -165,8 +153,6 @@ export default function CatalogScreen() {
             setFilteredProducts(products);
         } catch (error: any) {
             console.error('Error searching products:', error);
-            const msg = error.response?.data?.message || 'Search failed';
-            Alert.alert('Error', msg);
         } finally {
             setLoading(false);
         }
@@ -177,17 +163,12 @@ export default function CatalogScreen() {
             style={[styles.productCard, { width: CARD_WIDTH }]}
             onPress={() => navigation.navigate('product-details' as any, {
                 id: item._id || item.id,
-                name: item.name,
-                ref: item.ref || item.sku,
-                netWt: item.netWt,
-                grossWt: item.grossWt,
-                image: item.image || item.images?.[0]
+                ...item
             })}
             activeOpacity={0.9}
         >
             <View style={styles.imageContainer}>
                 <Image source={{ uri: getImageUrl(item.image || item.images?.[0]) }} style={styles.productImage} />
-
                 <TouchableOpacity
                     style={styles.favoriteButton}
                     onPress={() => handleToggleFavorite(item)}
@@ -195,221 +176,144 @@ export default function CatalogScreen() {
                     <Icon
                         name={item.isFavorite ? "favorite" : "favorite-border"}
                         size={18}
-                        color={item.isFavorite ? "#f43f5e" : "#1e293b"}
+                        color={item.isFavorite ? GOLD : TEXT_MUTED}
                     />
                 </TouchableOpacity>
-
-                {item.stockStatus && item.stockStatus !== 'In Stock' && (
-                    <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{item.stockStatus}</Text>
-                    </View>
-                )}
             </View>
 
             <View style={styles.productInfo}>
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-
-                <View style={styles.weightRow}>
-                    <View style={styles.weightItem}>
-                        <Text style={styles.weightLabel}>NET WT</Text>
-                        <Text style={styles.weightValue}>{item.netWt}g</Text>
-                    </View>
-                    <View style={styles.weightItem}>
-                        <Text style={styles.weightLabel}>GROSS WT</Text>
-                        <Text style={styles.weightValue}>{item.grossWt}g</Text>
-                    </View>
-                </View>
-
-                <View style={styles.materialRow}>
-                    <View style={[styles.materialDot, { backgroundColor: '#f3d7d4' }]} />
-                    <Text style={styles.materialText}>{item.materials?.[0] || 'Gold'}</Text>
-                </View>
-
                 <Text style={styles.skuText}>REF: {item.ref || item.sku}</Text>
+                <View style={styles.weightRow}>
+                    <Text style={styles.weightLabel}>NET WT</Text>
+                    <Text style={styles.weightValue}>{item.netWt} GM</Text>
+                </View>
+                <TouchableOpacity
+                    style={styles.viewBtn}
+                    onPress={() => navigation.navigate('product-details' as any, { id: item._id || item.id, ...item })}
+                >
+                    <Text style={styles.viewBtnText}>VIEW DETAILS</Text>
+                </TouchableOpacity>
             </View>
         </TouchableOpacity>
     );
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
 
             <LinearGradient
-                colors={Colors.gradient}
-                locations={Colors.locations}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                colors={[NAVY, NAVY_MID, '#09101d']}
                 style={styles.background}
             />
 
-            <GlassView blurType="light" blurAmount={40} style={[styles.header, { paddingTop: insets.top + 12 }]}>
-                {/* Top Header Row */}
+            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <View style={styles.topBar}>
-                    <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
-                        <Icon name="arrow-back-ios" size={20} color="#1e293b" style={{ marginLeft: 6 }} />
+                    <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
+                        <Icon name="arrow-back-ios" size={20} color={GOLD} style={{ marginLeft: 6 }} />
                     </TouchableOpacity>
-
-                    <Text style={styles.headerTitle}>CATALOG</Text>
-
-                    <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('cart' as any)}>
-                        <Icon name="shopping-bag" size={20} color="#1e293b" />
-                        {cartCount > 0 && (
-                            <View style={styles.cartBadge}>
-                                <Text style={styles.cartBadgeText}>{cartCount}</Text>
-                            </View>
-                        )}
+                    <Text style={styles.headerTitle}>COLLECTIONS</Text>
+                    <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('cart' as any)}>
+                        <Icon name="shopping-cart" size={20} color={GOLD} />
+                        {cartCount > 0 && <View style={styles.badge} />}
                     </TouchableOpacity>
                 </View>
 
-                {/* Search Bar */}
-                <View style={styles.searchContainer}>
+                <View style={styles.searchWrap}>
                     <View style={styles.searchBar}>
-                        <View style={styles.searchIcon}>
-                            <Icon name="search" size={20} color="#64748b" />
-                        </View>
+                        <Icon name="search" size={18} color={GOLD} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Search by name or SKU..."
-                            placeholderTextColor="#94a3b8"
+                            placeholder="Search masterpiece..."
+                            placeholderTextColor={TEXT_MUTED}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                             onSubmitEditing={handleSearch}
                             returnKeyType="search"
                         />
-                        {searchQuery.length > 0 && (
-                            <TouchableOpacity
-                                style={{ paddingRight: 12 }}
-                                onPress={() => {
-                                    setSearchQuery('');
-                                    setActiveFilterId(null);
-                                    setActiveFilter('All');
-                                }}
-                            >
-                                <Icon name="close" size={18} color="#94a3b8" />
-                            </TouchableOpacity>
-                        )}
                     </View>
+                    <TouchableOpacity style={styles.refineBtn} onPress={() => setShowRefine(true)}>
+                        <Icon name="tune" size={20} color={GOLD} />
+                    </TouchableOpacity>
                 </View>
 
-                {/* Filters */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filtersContainer}
-                >
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
                     <TouchableOpacity
-                        style={activeFilter === 'All' ? styles.filterButtonBlack : styles.filterButton}
+                        style={[styles.filterPill, activeFilter === 'All' && styles.filterPillActive]}
                         onPress={() => handleFilterPress('All', null)}
                     >
-                        <Text style={activeFilter === 'All' ? styles.filterTextWhite : styles.filterText}>ALL</Text>
+                        <Text style={[styles.filterText, activeFilter === 'All' && styles.filterTextActive]}>ALL</Text>
                     </TouchableOpacity>
-
                     {categories.map((cat) => (
                         <TouchableOpacity
                             key={cat._id}
-                            style={activeFilter === cat.name ? styles.filterButtonBlack : styles.filterButton}
+                            style={[styles.filterPill, activeFilter === cat.name && styles.filterPillActive]}
                             onPress={() => handleFilterPress(cat.name, cat._id)}
                         >
-                            <Text style={activeFilter === cat.name ? styles.filterTextWhite : styles.filterText}>{cat.name.toUpperCase()}</Text>
+                            <Text style={[styles.filterText, activeFilter === cat.name && styles.filterTextActive]}>{cat.name.toUpperCase()}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
-            </GlassView>
-
-            {/* Main Content */}
-            <View style={{ flex: 1 }}>
-                {loading ? (
-                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <ActivityIndicator size="large" color="#0f172a" />
-                        <Text style={{ marginTop: 12, color: '#64748b', fontSize: 13, fontWeight: '600' }}>Loading products...</Text>
-                    </View>
-                ) : (
-                    <FlatList
-                        data={filteredProducts}
-                        renderItem={renderProduct}
-                        keyExtractor={item => (item._id || item.id || '').toString()}
-                        numColumns={2}
-                        contentContainerStyle={styles.gridContent}
-                        columnWrapperStyle={styles.gridColumn}
-                        showsVerticalScrollIndicator={false}
-                        ListHeaderComponent={
-                            <View style={styles.collectionHeader}>
-                                <View>
-                                    <Text style={styles.collectionTag}>Collection 2024</Text>
-                                    <Text style={styles.collectionTitle}>
-                                        {activeFilter === 'All' ? 'All Products' : `${activeFilter}`}
-                                    </Text>
-                                    <Text style={styles.collectionSubtitle}>
-                                        {filteredProducts.length} pieces available
-                                    </Text>
-                                </View>
-                                <TouchableOpacity style={styles.refineButton} onPress={() => setShowRefine(true)}>
-                                    <Icon name="tune" size={16} color="#0f172a" />
-                                    <Text style={styles.refineText}>Refine</Text>
-                                </TouchableOpacity>
-                            </View>
-                        }
-                        ListEmptyComponent={
-                            <View style={{ alignItems: 'center', paddingTop: 60, paddingBottom: 60 }}>
-                                <Icon name="inventory-2" size={56} color="#cbd5e1" />
-                                <Text style={{ marginTop: 16, color: '#64748b', fontSize: 16, fontWeight: '600' }}>No products found</Text>
-                                <Text style={{ marginTop: 4, color: '#94a3b8', fontSize: 13 }}>Try adjusting your filters</Text>
-                            </View>
-                        }
-                    />
-                )}
             </View>
 
-            {/* Bottom Navigation */}
+            <FlatList
+                data={filteredProducts}
+                renderItem={renderProduct}
+                keyExtractor={item => (item._id || item.id || '').toString()}
+                numColumns={2}
+                contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]}
+                columnWrapperStyle={styles.columnWrapper}
+                showsVerticalScrollIndicator={false}
+                ListHeaderComponent={
+                    <View style={styles.listHeader}>
+                        <Text style={styles.resultsCount}>{filteredProducts.length} DESIGNS FOUND</Text>
+                        <View style={styles.headerLine} />
+                    </View>
+                }
+                ListEmptyComponent={
+                    <View style={styles.emptyState}>
+                        <Icon name="search-off" size={60} color={NAVY_BORDER} />
+                        <Text style={styles.emptyText}>No matches found</Text>
+                    </View>
+                }
+            />
+
             <BottomNav activeTab="Catalog" />
 
-            {/* Refine Modal */}
-            <Modal visible={showRefine} transparent animationType="slide">
+            <Modal visible={showRefine} transparent animationType="fade" onRequestClose={() => setShowRefine(false)}>
                 <View style={styles.modalOverlay}>
-                    <GlassView blurType="light" blurAmount={60} style={styles.refineModal}>
-                        <View style={styles.refineModalHeader}>
-                            <Text style={styles.refineModalTitle}>REFINE RESULTS</Text>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>REFINE RESULTS</Text>
                             <TouchableOpacity onPress={() => setShowRefine(false)}>
-                                <Icon name="close" size={24} color="#1e293b" />
+                                <Icon name="close" size={24} color={GOLD} />
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.refineSection}>
-                            <Text style={styles.refineSectionTitle}>SORT BY</Text>
+                        <Text style={styles.modalSub}>SORT BY PREFERENCE</Text>
+                        <View style={styles.sortList}>
                             {[
                                 { label: 'Newest First', value: 'createdAt', order: 'desc' },
-                                { label: 'Oldest First', value: 'createdAt', order: 'asc' },
-                                { label: 'Net Weight ↑', value: 'netWt', order: 'asc' },
-                                { label: 'Net Weight ↓', value: 'netWt', order: 'desc' },
-                                { label: 'Gross Weight ↑', value: 'grossWt', order: 'asc' },
-                                { label: 'Gross Weight ↓', value: 'grossWt', order: 'desc' },
-                            ].map((option) => (
+                                { label: 'Weight: Low to High', value: 'netWt', order: 'asc' },
+                                { label: 'Weight: High to Low', value: 'netWt', order: 'desc' },
+                            ].map((opt) => (
                                 <TouchableOpacity
-                                    key={`${option.value}-${option.order}`}
-                                    style={[
-                                        styles.refineOption,
-                                        sortBy === option.value && sortOrder === option.order && styles.refineOptionActive,
-                                    ]}
-                                    onPress={() => {
-                                        setSortBy(option.value);
-                                        setSortOrder(option.order);
-                                    }}
+                                    key={`${opt.value}-${opt.order}`}
+                                    style={[styles.sortOpt, sortBy === opt.value && sortOrder === opt.order && styles.sortOptActive]}
+                                    onPress={() => { setSortBy(opt.value); setSortOrder(opt.order); }}
                                 >
-                                    <Text style={[
-                                        styles.refineOptionText,
-                                        sortBy === option.value && sortOrder === option.order && styles.refineOptionTextActive,
-                                    ]}>{option.label}</Text>
-                                    {/* {sortBy === option.value && sortOrder === option.order && (
-                                        <Icon name="check" size={18} color="#fff" />
-                                    )} */}
+                                    <Text style={[styles.sortText, sortBy === opt.value && sortOrder === opt.order && styles.sortTextActive]}>{opt.label}</Text>
+                                    {sortBy === opt.value && sortOrder === opt.order && <Icon name="check" size={18} color={NAVY} />}
                                 </TouchableOpacity>
                             ))}
                         </View>
 
-                        <TouchableOpacity style={styles.applyButton} onPress={handleApplyRefine}>
-                            <Text style={styles.applyButtonText}>APPLY FILTERS</Text>
+                        <TouchableOpacity style={styles.applyBtn} onPress={handleApplyRefine}>
+                            <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={styles.applyGradient}>
+                                <Text style={styles.applyText}>APPLY FILTERS</Text>
+                            </LinearGradient>
                         </TouchableOpacity>
-                    </GlassView>
+                    </View>
                 </View>
             </Modal>
         </View>
@@ -417,377 +321,57 @@ export default function CatalogScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    background: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
+    container: { flex: 1, backgroundColor: NAVY },
+    background: { ...StyleSheet.absoluteFillObject },
     header: {
-        paddingBottom: 12,
+        backgroundColor: 'rgba(11,18,32,0.98)',
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.6)',
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        zIndex: 10,
+        borderColor: NAVY_BORDER,
+        paddingBottom: 15,
     },
-    topBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingBottom: 12,
-    },
-    iconButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
-    },
-    headerTitle: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#0f172a',
-        letterSpacing: 2,
-        flex: 1,
-        textAlign: 'center',
-    },
-    cartBadge: {
-        position: 'absolute',
-        top: 4,
-        right: 4,
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: '#fb7185',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'white',
-    },
-    cartBadgeText: {
-        color: 'white',
-        fontSize: 9,
-        fontWeight: 'bold',
-    },
-    searchContainer: {
-        paddingHorizontal: 20,
-        paddingBottom: 10,
-    },
-    searchBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 44,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.5)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-    },
-    searchIcon: {
-        paddingLeft: 14,
-    },
-    searchInput: {
-        flex: 1,
-        height: '100%',
-        paddingHorizontal: 10,
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#0f172a',
-    },
-    filtersContainer: {
-        paddingHorizontal: 20,
-        paddingVertical: 4,
-        gap: 8,
-        paddingBottom: 8,
-    },
-    filterButtonBlack: {
-        height: 34,
-        paddingHorizontal: 18,
-        backgroundColor: '#0f172a',
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    filterTextWhite: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: '800',
-        letterSpacing: 1,
-    },
-    filterButton: {
-        height: 34,
-        paddingHorizontal: 14,
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    filterText: {
-        color: '#334155',
-        fontSize: 10,
-        fontWeight: '800',
-        letterSpacing: 0.5,
-    },
-    gridContent: {
-        paddingHorizontal: 16,
-        paddingTop: 20,
-        paddingBottom: 140, // Increased bottom padding
-    },
-    collectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-        marginBottom: 20,
-        paddingHorizontal: 4,
-    },
-    collectionTag: {
-        fontSize: 10,
-        fontWeight: '800',
-        color: '#6366f1',
-        letterSpacing: 2,
-        marginBottom: 4,
-        textTransform: 'uppercase',
-    },
-    collectionTitle: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: '#0f172a',
-        letterSpacing: -0.5,
-    },
-    collectionSubtitle: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#64748b',
-        marginTop: 4,
-    },
-    refineButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.5)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-    },
-    refineText: {
-        fontSize: 11,
-        fontWeight: '800',
-        color: '#0f172a',
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
-    },
-    gridColumn: {
-        justifyContent: 'space-between',
-        marginBottom: 14,
-    },
-    productCard: {
-        borderRadius: 20,
-        padding: 10,
-        backgroundColor: 'rgba(255,255,255,0.45)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-    },
-    imageContainer: {
-        width: '100%',
-        aspectRatio: 0.9,
-        borderRadius: 14,
-        overflow: 'hidden',
-        position: 'relative',
-        marginBottom: 10,
-        backgroundColor: '#f8fafc',
-    },
-    productImage: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-    },
-    favoriteButton: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'rgba(255,255,255,0.7)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-    },
-    badge: {
-        position: 'absolute',
-        bottom: 8,
-        left: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
-        backgroundColor: 'rgba(255, 247, 237, 0.9)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
-    },
-    badgeText: {
-        fontSize: 8,
-        fontWeight: '800',
-        color: '#9a3412',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    productInfo: {
-        paddingHorizontal: 4,
-        paddingTop: 2,
-    },
-    productName: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0f172a',
-        marginBottom: 6,
-    },
-    weightRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 6,
-        paddingVertical: 6,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: 'rgba(0,0,0,0.04)',
-    },
-    weightItem: {
-        alignItems: 'center',
-    },
-    weightLabel: {
-        fontSize: 8,
-        fontWeight: '800',
-        color: '#94a3b8',
-        letterSpacing: 1,
-        marginBottom: 2,
-    },
-    weightValue: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#0f172a',
-    },
-    materialRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginBottom: 4,
-    },
-    materialDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: 'white',
-    },
-    materialText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#475569',
-    },
-    skuText: {
-        fontSize: 9,
-        fontWeight: '700',
-        color: '#94a3b8',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginTop: 2,
-    },
-
-
-    // Refine Modal Styles
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        justifyContent: 'flex-end',
-    },
-    refineModal: {
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        padding: 24,
-        paddingBottom: 40,
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.8)',
-    },
-    refineModalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 24,
-    },
-    refineModalTitle: {
-        fontSize: 14,
-        fontWeight: '900',
-        color: '#0f172a',
-        letterSpacing: 2,
-    },
-    refineSection: {
-        marginBottom: 24,
-    },
-    refineSectionTitle: {
-        fontSize: 10,
-        fontWeight: '800',
-        color: '#64748b',
-        letterSpacing: 2,
-        marginBottom: 12,
-    },
-    refineOption: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        marginBottom: 6,
-        backgroundColor: 'rgba(241,245,249,0.8)',
-    },
-    refineOptionActive: {
-        backgroundColor: '#0f172a',
-    },
-    refineOptionText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#334155',
-    },
-    refineOptionTextActive: {
-        color: '#fff',
-    },
-    applyButton: {
-        backgroundColor: '#0f172a',
-        borderRadius: 16,
-        paddingVertical: 16,
-        alignItems: 'center',
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    applyButtonText: {
-        color: '#fff',
-        fontSize: 13,
-        fontWeight: '900',
-        letterSpacing: 2,
-    },
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, height: 50 },
+    headerBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: NAVY_CARD, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER },
+    headerTitle: { fontSize: 13, fontWeight: '900', color: GOLD, letterSpacing: 2 },
+    badge: { position: 'absolute', top: 10, right: 10, width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444', borderWidth: 1, borderColor: NAVY },
+    searchWrap: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginTop: 15 },
+    searchBar: { flex: 1, height: 48, borderRadius: 14, backgroundColor: NAVY_INPUT, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, borderWidth: 1, borderColor: NAVY_BORDER },
+    searchInput: { flex: 1, marginLeft: 10, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500' },
+    refineBtn: { width: 48, height: 48, borderRadius: 14, backgroundColor: NAVY_CARD, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER },
+    filterScroll: { paddingHorizontal: 20, gap: 10, marginTop: 15 },
+    filterPill: { paddingHorizontal: 18, height: 34, borderRadius: 12, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, justifyContent: 'center', alignItems: 'center' },
+    filterPillActive: { backgroundColor: GOLD, borderColor: GOLD },
+    filterText: { fontSize: 10, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1 },
+    filterTextActive: { color: NAVY },
+    listContent: { paddingHorizontal: 20, paddingTop: 20 },
+    columnWrapper: { justifyContent: 'space-between', marginBottom: 20 },
+    productCard: { backgroundColor: NAVY_CARD, borderRadius: 24, padding: 10, borderWidth: 1, borderColor: NAVY_BORDER },
+    imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: '#000' },
+    productImage: { ...StyleSheet.absoluteFillObject },
+    favoriteButton: { position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    productInfo: { padding: 8, gap: 4 },
+    productName: { fontSize: 14, fontWeight: '300', color: TEXT_PRIMARY },
+    skuText: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 0.5 },
+    weightRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: 'rgba(232,201,122,0.1)' },
+    weightLabel: { fontSize: 8, fontWeight: '900', color: GOLD_LIGHT },
+    weightValue: { fontSize: 11, fontWeight: '800', color: TEXT_PRIMARY },
+    viewBtn: { height: 36, backgroundColor: 'rgba(232,201,122,0.08)', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: 'rgba(232,201,122,0.2)' },
+    viewBtnText: { color: GOLD, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+    listHeader: { marginBottom: 20 },
+    resultsCount: { fontSize: 9, fontWeight: '900', color: GOLD, letterSpacing: 1.5 },
+    headerLine: { height: 1, width: 30, backgroundColor: GOLD, marginTop: 4 },
+    emptyState: { padding: 60, alignItems: 'center', gap: 15 },
+    emptyText: { color: TEXT_MUTED, fontSize: 14, fontWeight: '600' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(11,18,32,0.9)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: NAVY_CARD, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, borderWidth: 1, borderColor: NAVY_BORDER },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+    modalTitle: { fontSize: 13, fontWeight: '900', color: GOLD, letterSpacing: 2 },
+    modalSub: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1.5, marginBottom: 15 },
+    sortList: { gap: 10, marginBottom: 30 },
+    sortOpt: { height: 54, borderRadius: 16, backgroundColor: NAVY_INPUT, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, borderWidth: 1, borderColor: NAVY_BORDER },
+    sortOptActive: { backgroundColor: GOLD, borderColor: GOLD },
+    sortText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
+    sortTextActive: { color: NAVY, fontWeight: '900' },
+    applyBtn: { height: 54, borderRadius: 16, overflow: 'hidden', elevation: 8 },
+    applyGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    applyText: { color: NAVY, fontSize: 13, fontWeight: '900', letterSpacing: 1 },
 });

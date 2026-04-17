@@ -1,3 +1,4 @@
+$RNFirebaseAsStaticFramework = true
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -7,6 +8,8 @@ require Pod::Executable.execute_command('node', ['-p',
 
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
+
+use_modular_headers!
 
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
@@ -24,6 +27,12 @@ target 'SvGold' do
   )
 
   post_install do |installer|
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+    end
+    
     react_native_post_install(
       installer,
       config[:reactNativePath],

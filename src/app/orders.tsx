@@ -5,26 +5,29 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
-
+    Image,
     ActivityIndicator,
     RefreshControl,
-    Platform,
+    StatusBar,
     Alert,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
-import GlassView from '../components/GlassView';
-import { StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Icon from '../components/Icon';
+import Icon, { IconName } from '../components/Icon';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { orderService } from '../services/orderService';
 import { useCart } from '../context/CartContext';
 import { storage } from '../services/storage';
-import { API_BASE_URL } from '../constants/api';
+import { API_BASE_URL, getImageUrl } from '../constants/api';
+import MessageModal from '../components/MessageModal';
 import BottomNav from '../components/BottomNav';
+import { B2B } from '../constants/Colors';
+import ScreenHeader from '../components/ScreenHeader';
+
+const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED, GOLD_DIM, GOLD_BORDER, NAVY_MID } = B2B;
 
 const TABS = ['All', 'Processing', 'Shipment', 'Completed'];
 
@@ -46,7 +49,21 @@ export default function OrderHistoryScreen() {
     const { updateCartCount } = useCart();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
+    const [modalConfig, setModalConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+        onClose?: () => void;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'success'
+    });
     const [refreshing, setRefreshing] = useState(false);
+    const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+    const [downloading, setDownloading] = useState<string | null>(null);
 
     const fetchOrders = async () => {
         try {
@@ -57,7 +74,7 @@ export default function OrderHistoryScreen() {
         } catch (error: any) {
             console.error('Failed to load orders', error);
             const msg = error.response?.data?.message || 'Failed to load orders';
-            Alert.alert('Error', msg);
+            setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -78,13 +95,13 @@ export default function OrderHistoryScreen() {
         try {
             const token = await storage.getItem('userToken');
             if (!token) {
-                Alert.alert('Error', 'You need to be logged in to view invoices');
+                setModalConfig({ visible: true, title: 'Error', message: 'You need to be logged in to view invoices', type: 'error' });
                 return;
             }
 
             const downloadDir = RNFS.CachesDirectoryPath;
             if (!downloadDir) {
-                Alert.alert('Error', 'Storage not available on this device');
+                setModalConfig({ visible: true, title: 'Error', message: 'Storage not available on this device', type: 'error' });
                 return;
             }
 
@@ -100,12 +117,12 @@ export default function OrderHistoryScreen() {
             if (downloadRes.statusCode === 200) {
                 await Share.open({ url: `file://${fileUri}`, type: 'application/pdf' });
             } else {
-                Alert.alert('Error', 'Failed to download invoice');
+                setModalConfig({ visible: true, title: 'Error', message: 'Failed to download invoice', type: 'error' });
             }
         } catch (error: any) {
             console.error('Invoice download error:', error);
             const msg = error.response?.data?.message || 'Could not download invoice';
-            Alert.alert('Error', msg);
+            setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
         }
     };
 
@@ -124,171 +141,238 @@ export default function OrderHistoryScreen() {
         return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
-    const getStatusConfig = (status: string) => {
+    const getStatusConfig = (status: string): { label: string; color: string; bg: string; icon: IconName } => {
         switch (status) {
             case 'PROCESSING':
             case 'PENDING':
                 return {
                     label: 'Processing',
-                    color: '#92400e', // amber-800
-                    bg: 'rgba(251, 191, 36, 0.2)', // amber-400/20
-                    icon: null
+                    color: GOLD,
+                    bg: GOLD_DIM,
+                    icon: 'history'
                 };
             case 'SHIPMENT':
             case 'SHIPPED':
                 return {
                     label: 'Shipment',
-                    color: '#6366f1', // primary
-                    bg: 'rgba(99, 102, 241, 0.2)', // primary/20
+                    color: '#6366f1',
+                    bg: 'rgba(99, 102, 241, 0.15)',
                     icon: 'local-shipping'
                 };
             case 'COMPLETED':
             case 'DELIVERED':
                 return {
                     label: 'Delivered',
-                    color: '#059669', // emerald-600
-                    bg: 'rgba(52, 211, 153, 0.2)', // emerald-400/20
+                    color: '#10b981',
+                    bg: 'rgba(16, 185, 129, 0.15)',
                     icon: 'check-circle'
                 };
             case 'CANCELLED':
                 return {
                     label: 'Cancelled',
-                    color: '#dc2626', // red-600
-                    bg: 'rgba(248, 113, 113, 0.2)', // red-400/20
-                    icon: 'cancel'
+                    color: '#ef4444',
+                    bg: 'rgba(239, 68, 68, 0.15)',
+                    icon: 'close'
                 };
             default:
                 return {
                     label: status,
-                    color: '#4b5563',
-                    bg: 'rgba(156, 163, 175, 0.2)',
-                    icon: null
+                    color: TEXT_MUTED,
+                    bg: NAVY_INPUT,
+                    icon: 'info'
                 };
         }
     };
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
 
             <LinearGradient
-                colors={['#FDE7F9', '#E3F2FD', '#F3E5F5']}
+                colors={[NAVY, NAVY_MID, '#111D35']}
+                locations={[0, 0.5, 1]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.background}
             />
 
-            <GlassView blurType="light" blurAmount={80} style={[styles.header, { paddingTop: insets.top }]}>
-                <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-                        <Icon name="arrow-back-ios" size={20} color="#334155" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Order History</Text>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Icon name="search" size={24} color="#334155" />
-                    </TouchableOpacity>
-                </View>
+            <MessageModal
+                visible={modalConfig.visible}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                type={modalConfig.type}
+                onClose={() => {
+                    setModalConfig(prev => ({ ...prev, visible: false }));
+                    if (modalConfig.onClose) modalConfig.onClose();
+                }}
+            />
 
-                <View style={styles.tabsContainer}>
-                    <View style={styles.tabsWrapper}>
-                        {TABS.map((tab) => (
+            <ScreenHeader
+                showBack
+                title="Order Repository"
+                rightElement={
+                    <TouchableOpacity style={styles.headerRight}>
+                        <Icon name="search" size={24} color={GOLD} />
+                    </TouchableOpacity>
+                }
+            />
+
+            <View style={styles.tabsSection}>
+                <View style={styles.tabsWrapper}>
+                    {TABS.map((tab) => {
+                        const isActive = activeTab === tab;
+                        return (
                             <TouchableOpacity
                                 key={tab}
-                                style={[styles.tab, activeTab === tab && styles.activeTab]}
+                                style={[styles.tab, isActive && styles.activeTab]}
                                 onPress={() => setActiveTab(tab)}
                             >
-                                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                                <Text style={[styles.tabText, isActive && styles.activeTabText]}>
                                     {tab}
                                 </Text>
+                                {isActive && (
+                                    <LinearGradient
+                                        colors={[GOLD_DARK, GOLD, GOLD_LIGHT]}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={styles.activeTabIndicator}
+                                    />
+                                )}
                             </TouchableOpacity>
-                        ))}
-                    </View>
+                        );
+                    })}
                 </View>
-            </GlassView>
+            </View>
 
             <ScrollView
-                contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 80 }]}
+                contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
                 showsVerticalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={GOLD}
+                        colors={[GOLD]}
+                    />
+                }
             >
                 {loading ? (
-                    <ActivityIndicator size="large" color="#6366f1" style={{ marginTop: 40 }} />
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={GOLD} />
+                    </View>
                 ) : filteredOrders.length > 0 ? (
                     filteredOrders.map((order) => {
                         const statusConfig = getStatusConfig(order.status);
                         return (
-                            <View key={order._id} style={styles.section}>
-                                <View style={styles.sectionHeader}>
-                                    <Text style={styles.sectionTitle}>
-                                        {activeTab === 'All' ? statusConfig.label : activeTab}
-                                    </Text>
-                                    <View style={styles.countBadge}>
-                                        <Text style={styles.countText}>Order #{order.orderId}</Text>
+                            <TouchableOpacity
+                                key={order._id}
+                                style={styles.orderCard}
+                                activeOpacity={0.7}
+                                onPress={() => setExpandedOrderId(expandedOrderId === order._id ? null : order._id)}
+                            >
+                                <View style={styles.cardHeader}>
+                                    <View>
+                                        <Text style={styles.orderIdText}>Order #{order.orderId}</Text>
+                                        <Text style={styles.orderDateText}>{formatDate(order.createdAt)}</Text>
+                                    </View>
+                                    <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
+                                        <Icon name={statusConfig.icon} size={14} color={statusConfig.color} style={{ marginRight: 6 }} />
+                                        <Text style={[styles.statusTabText, { color: statusConfig.color }]}>
+                                            {statusConfig.label}
+                                        </Text>
                                     </View>
                                 </View>
 
-                                <GlassView blurType="light" blurAmount={40} style={styles.card}>
-                                    <View style={styles.cardHeader}>
-                                        <View>
-                                            <Text style={styles.orderId}>Order #{order.orderId}</Text>
-                                            <Text style={styles.orderDate}>Ordered {formatDate(order.createdAt)}</Text>
-                                        </View>
-                                        <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-                                            {/* {statusConfig.icon && (
-                                                // <Icon name={statusConfig.icon as any} size={12} color={statusConfig.color} style={{ marginRight: 4 }} />
-                                            )} */}
-                                            <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                                                {statusConfig.label.toUpperCase()}
-                                            </Text>
-                                        </View>
-                                    </View>
+                                <View style={styles.cardDivider} />
 
-                                    <View style={styles.cardStats}>
-                                        <View style={styles.statCol}>
-                                            <Text style={styles.statLabel}>Total Net Weight</Text>
-                                            <Text style={styles.statValue}>{order.totalNetWeight}g</Text>
-                                        </View>
-                                        <View style={styles.statCol}>
-                                            <Text style={styles.statLabel}>Total Gross Weight</Text>
-                                            <Text style={styles.statValue}>{order.totalGrossWeight}g</Text>
-                                        </View>
+                                <View style={styles.statsRow}>
+                                    <View style={styles.statBox}>
+                                        <Text style={styles.statLabelText}>Net Weight</Text>
+                                        <Text style={styles.statValueText}>{order.totalNetWeight}<Text style={styles.unitText}>g</Text></Text>
                                     </View>
-
-                                    <View style={styles.cardFooter}>
-                                        <View style={styles.itemsInfo}>
-                                            <View style={styles.itemsIcon}>
-                                                <Icon name="inventory-2" size={16} color="#475569" />
-                                            </View>
-                                            <Text style={styles.itemsText}>{order.items.length} Luxury Items</Text>
-                                        </View>
-                                        <Icon name="chevron-right" size={20} color="#94a3b8" />
+                                    <View style={[styles.statBox, styles.statBorder]}>
+                                        <Text style={styles.statLabelText}>Gross Weight</Text>
+                                        <Text style={styles.statValueText}>{order.totalGrossWeight}<Text style={styles.unitText}>g</Text></Text>
                                     </View>
+                                    <View style={[styles.statBox, styles.statBorder]}>
+                                        <Text style={styles.statLabelText}>Items</Text>
+                                        <Text style={styles.statValueText}>{order.items.length}<Text style={styles.unitText}> SKU</Text></Text>
+                                    </View>
+                                </View>
 
-                                    {['SHIPMENT', 'SHIPPED', 'COMPLETED', 'DELIVERED'].includes(order.status) && (
-                                        <View style={{ marginTop: 16, gap: 12 }}>
-                                            {order.trackingId && (
-                                                <View style={[styles.invoiceButton, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
-                                                    <Icon name="local-shipping" size={20} color="#15803d" />
-                                                    <Text style={[styles.invoiceText, { color: '#15803d' }]}>Tracking ID: {order.trackingId}</Text>
+                                {expandedOrderId === order._id && (
+                                    <View style={styles.expandedSection}>
+                                        <Text style={styles.expandedTitle}>ITEM BREAKDOWN</Text>
+                                        <View style={styles.expandedDivider} />
+                                        {order.items.map((item, idx) => {
+                                            const imgUrl = item.product?.images?.[0] ? getImageUrl(item.product.images[0]) : 'https://images.unsplash.com/photo-1615486171448-4fd3ac54bc67';
+                                            return (
+                                                <View key={idx} style={styles.expandedItemRow}>
+                                                    <Image source={{ uri: imgUrl }} style={styles.expandedItemImage} />
+                                                    <View style={styles.expandedItemDetails}>
+                                                        <Text style={styles.expandedItemName} numberOfLines={1}>{item.product?.name || 'Unknown Product'}</Text>
+                                                        <Text style={styles.expandedItemSku} numberOfLines={1}>{item.product?.sku || ''}</Text>
+                                                        <View style={styles.expandedItemMetaRow}>
+                                                            {item.material && <View style={styles.expandedBadge}><Text style={styles.expandedBadgeText}>{item.material}</Text></View>}
+                                                            {item.purity && <View style={styles.expandedBadge}><Text style={styles.expandedBadgeText}>{item.purity}</Text></View>}
+                                                            {item.size && <View style={styles.expandedBadge}><Text style={styles.expandedBadgeText}>Sz {item.size}</Text></View>}
+                                                        </View>
+                                                        {item.description ? (
+                                                            <View style={styles.expandedNoteRow}>
+                                                                <Text style={styles.expandedNoteLabel}>NOTE: </Text>
+                                                                <Text style={styles.expandedNoteText}>{item.description}</Text>
+                                                            </View>
+                                                        ) : null}
+                                                    </View>
+                                                    <View style={styles.expandedItemQty}>
+                                                        <Text style={styles.expandedQtyLabel}>QTY</Text>
+                                                        <Text style={styles.expandedQtyValue}>{item.quantity}</Text>
+                                                    </View>
                                                 </View>
-                                            )}
-                                            <TouchableOpacity
-                                                style={styles.invoiceButton}
-                                                onPress={() => handleDownloadInvoice(order.orderId)}
-                                            >
-                                                <Icon name="receipt-long" size={20} color="#1e293b" />
-                                                <Text style={styles.invoiceText}>View Digital Invoice</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
-                                </GlassView>
-                            </View>
+                                            );
+                                        })}
+                                    </View>
+                                )}
+
+                                {(order.trackingId || ['SHIPMENT', 'SHIPPED', 'COMPLETED', 'DELIVERED'].includes(order.status)) && (
+                                    <View style={styles.cardActions}>
+                                        {order.trackingId && (
+                                            <View style={styles.trackingInfo}>
+                                                <Icon name="local-shipping" size={16} color={GOLD} />
+                                                <Text style={styles.trackingText}>{order.trackingId}</Text>
+                                            </View>
+                                        )}
+                                        <TouchableOpacity
+                                            style={styles.invoiceBtn}
+                                            onPress={() => handleDownloadInvoice(order.orderId)}
+                                        >
+                                            <LinearGradient
+                                                colors={[GOLD_DARK, GOLD]}
+                                                start={{ x: 0, y: 0 }}
+                                                end={{ x: 1, y: 1 }}
+                                                style={styles.invoiceGradient}
+                                            />
+                                            <Icon name="receipt-long" size={18} color={NAVY} />
+                                            <Text style={styles.invoiceBtnText}>INVOICE</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                         );
                     })
                 ) : (
-                    <View style={styles.emptyState}>
-                        <Icon name="shopping-bag" size={48} color="#cbd5e1" />
-                        <Text style={styles.emptyText}>No orders found</Text>
+                    <View style={styles.emptyContainer}>
+                        <View style={styles.emptyIconCircle}>
+                            <Icon name="inventory-2" size={48} color={NAVY_BORDER} />
+                        </View>
+                        <Text style={styles.emptyTitleText}>No Orders Documented</Text>
+                        <Text style={styles.emptySubText}>Your transaction history will be cataloged here as you place orders.</Text>
+                        <TouchableOpacity
+                            style={styles.browseBtn}
+                            onPress={() => navigation.navigate('home' as any)}
+                        >
+                            <Text style={styles.browseBtnText}>CATALOG BROWSER</Text>
+                        </TouchableOpacity>
                     </View>
                 )}
             </ScrollView>
@@ -301,124 +385,74 @@ export default function OrderHistoryScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: NAVY,
     },
     background: {
         position: 'absolute',
+        top: 0,
         left: 0,
         right: 0,
-        top: 0,
         bottom: 0,
     },
-    header: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.2)',
+    headerRight: {
+        padding: 8,
     },
-    headerTop: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingBottom: 16,
-        paddingTop: 12,
-    },
-    headerTitle: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#0f172a',
-    },
-    iconButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    tabsContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 16,
+    tabsSection: {
+        paddingHorizontal: 20,
+        marginTop: 12,
+        marginBottom: 20,
     },
     tabsWrapper: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: NAVY_CARD,
         borderRadius: 16,
         padding: 4,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
+        borderColor: NAVY_BORDER,
     },
     tab: {
         flex: 1,
-        paddingVertical: 8,
+        height: 44,
+        justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 12,
+        position: 'relative',
     },
     activeTab: {
-        backgroundColor: 'rgba(255,255,255,0.6)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        backgroundColor: 'rgba(201,168,76,0.05)',
     },
     tabText: {
         fontSize: 12,
-        fontWeight: '600',
-        color: '#475569',
+        fontWeight: '700',
+        color: TEXT_MUTED,
     },
     activeTabText: {
-        color: '#0f172a',
-        fontWeight: '700',
+        color: GOLD,
+        fontWeight: '900',
+    },
+    activeTabIndicator: {
+        position: 'absolute',
+        bottom: 6,
+        width: 12,
+        height: 2,
+        borderRadius: 1,
     },
     scrollContent: {
-        paddingTop: 140,
-        paddingHorizontal: 16,
-        paddingBottom: 100,
+        paddingHorizontal: 20,
+        paddingTop: 4,
     },
-    section: {
-        marginBottom: 24,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
+    loadingContainer: {
+        marginTop: 60,
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-        paddingHorizontal: 4,
     },
-    sectionTitle: {
-        fontSize: 11,
-        fontWeight: '800',
-        color: '#64748b',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    countBadge: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
-    },
-    countText: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#94a3b8',
-    },
-    card: {
+    orderCard: {
+        backgroundColor: NAVY_CARD,
         borderRadius: 24,
         padding: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        marginBottom: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.6)',
-        shadowColor: '#fff',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
+        borderColor: NAVY_BORDER,
+        overflow: 'hidden',
     },
     cardHeader: {
         flexDirection: 'row',
@@ -426,106 +460,246 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
         marginBottom: 16,
     },
-    orderId: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#0f172a',
+    orderIdText: {
+        fontSize: 15,
+        fontWeight: '900',
+        color: TEXT_PRIMARY,
         letterSpacing: -0.5,
     },
-    orderDate: {
+    orderDateText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#64748b',
+        color: TEXT_MUTED,
         marginTop: 4,
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
+        paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 12,
+        borderRadius: 10,
     },
-    statusText: {
+    statusTabText: {
         fontSize: 10,
         fontWeight: '900',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    cardStats: {
-        flexDirection: 'row',
-        gap: 24,
-        paddingVertical: 20,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
-        marginBottom: 20,
-    },
-    statCol: {
-        flex: 1,
-        gap: 4,
-    },
-    statLabel: {
-        fontSize: 10,
-        fontWeight: '900',
-        color: '#94a3b8',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    statValue: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#1e293b',
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    itemsInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    itemsIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: 12,
-        backgroundColor: '#f1f5f9',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    itemsText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#475569',
-    },
-    invoiceButton: {
-        backgroundColor: '#f8fafc',
-        borderRadius: 20,
-        paddingVertical: 16,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 12,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-    },
-    invoiceText: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#1e293b',
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
-    emptyState: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 60,
+    cardDivider: {
+        height: 1,
+        backgroundColor: NAVY_BORDER,
+        marginBottom: 16,
     },
-    emptyText: {
-        marginTop: 12,
-        fontSize: 14,
+    statsRow: {
+        flexDirection: 'row',
+    },
+    statBox: {
+        flex: 1,
+        gap: 4,
+    },
+    statBorder: {
+        borderLeftWidth: 1,
+        borderLeftColor: NAVY_BORDER,
+        paddingLeft: 16,
+    },
+    statLabelText: {
+        fontSize: 9,
+        fontWeight: '900',
+        color: TEXT_MUTED,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    statValueText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: TEXT_PRIMARY,
+    },
+    unitText: {
+        fontSize: 10,
+        color: TEXT_MUTED,
         fontWeight: '600',
-        color: '#94a3b8',
+    },
+    cardActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 20,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: NAVY_BORDER,
+    },
+    trackingInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    trackingText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: TEXT_MUTED,
+    },
+    invoiceBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 12,
+        gap: 8,
+        overflow: 'hidden',
+    },
+    invoiceGradient: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    invoiceBtnText: {
+        fontSize: 11,
+        fontWeight: '900',
+        color: NAVY,
+        letterSpacing: 0.5,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingTop: 80,
+    },
+    emptyIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: NAVY_CARD,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        marginBottom: 24,
+    },
+    emptyTitleText: {
+        fontSize: 18,
+        fontWeight: '900',
+        color: TEXT_PRIMARY,
+        marginBottom: 8,
+    },
+    emptySubText: {
+        fontSize: 13,
+        color: TEXT_MUTED,
+        textAlign: 'center',
+        lineHeight: 20,
+        paddingHorizontal: 40,
+        marginBottom: 32,
+    },
+    browseBtn: {
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        backgroundColor: GOLD,
+        borderRadius: 16,
+    },
+    browseBtnText: {
+        fontSize: 12,
+        fontWeight: '900',
+        color: NAVY,
+        letterSpacing: 1,
+    },
+    expandedSection: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: NAVY_BORDER,
+    },
+    expandedTitle: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: GOLD,
+        letterSpacing: 2,
+    },
+    expandedDivider: {
+        height: 1,
+        backgroundColor: NAVY_BORDER,
+        marginTop: 8,
+        marginBottom: 12,
+    },
+    expandedItemRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    expandedItemImage: {
+        width: 48,
+        height: 48,
+        borderRadius: 8,
+        backgroundColor: NAVY_INPUT,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+    },
+    expandedItemDetails: {
+        flex: 1,
+        paddingHorizontal: 12,
+        justifyContent: 'center',
+    },
+    expandedItemName: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: TEXT_PRIMARY,
+        marginBottom: 2,
+    },
+    expandedItemSku: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: TEXT_MUTED,
+        marginBottom: 6,
+    },
+    expandedItemMetaRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginBottom: 8,
+    },
+    expandedBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        backgroundColor: NAVY_INPUT,
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+    },
+    expandedBadgeText: {
+        fontSize: 9,
+        fontWeight: '900',
+        color: TEXT_MUTED,
+        letterSpacing: 0.5,
+    },
+    expandedNoteRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(251,113,133,0.05)',
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(251,113,133,0.1)',
+        alignSelf: 'flex-start',
+        marginTop: 4,
+    },
+    expandedNoteLabel: {
+        fontSize: 9,
+        fontWeight: '900',
+        color: '#fb7185',
+    },
+    expandedNoteText: {
+        fontSize: 9,
+        fontWeight: '500',
+        color: TEXT_PRIMARY,
+    },
+    expandedItemQty: {
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+    },
+    expandedQtyLabel: {
+        fontSize: 9,
+        fontWeight: '900',
+        color: TEXT_MUTED,
+        letterSpacing: 1,
+    },
+    expandedQtyValue: {
+        fontSize: 16,
+        fontWeight: '900',
+        color: GOLD,
     },
 });

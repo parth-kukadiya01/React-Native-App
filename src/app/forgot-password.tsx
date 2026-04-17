@@ -10,24 +10,41 @@ import {
     Alert,
     ActivityIndicator,
     ScrollView,
+    StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
-import GlassView from '../components/GlassView';
-import { StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from '../components/Icon';
-import { Colors } from '../constants/Colors';
+import { B2B } from '../constants/Colors';
 import { authService } from '../services/authService';
+import MessageModal from '../components/MessageModal';
+
+const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED, NAVY_MID } = B2B;
 
 export default function ForgotPasswordScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
+    const [fieldError, setFieldError] = useState('');
+
+    const [modalConfig, setModalConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+        onClose?: () => void;
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'success'
+    });
 
     const handleSendCode = async () => {
+        setFieldError('');
         if (!email) {
-            Alert.alert('Error', 'Please enter your email address');
+            setFieldError('Please enter your email address');
             return;
         }
 
@@ -35,101 +52,109 @@ export default function ForgotPasswordScreen() {
         try {
             await authService.forgotPassword(email);
             setLoading(false);
-
-            Alert.alert(
-                'Code Sent',
-                `A 6-digit verification code has been sent to ${email}`,
-                [
-                    {
-                        text: 'Enter Code',
-                        onPress: () => navigation.navigate('reset-password' as any, { email })
-                    }
-                ]
-            );
+            setModalConfig({
+                visible: true,
+                title: 'Code Sent',
+                message: `A 6-digit verification code has been sent to ${email}`,
+                type: 'success',
+                onClose: () => navigation.navigate('reset-password' as any, { email })
+            });
         } catch (error: any) {
             setLoading(false);
+
+            // Handle specific field validation errors from backend
+            if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+                const emailErr = error.response.data.errors.find((err: any) => err.path === 'email');
+                if (emailErr) {
+                    setFieldError(emailErr.msg);
+                    return;
+                }
+            }
+
             const message = error.response?.data?.message || 'Failed to send reset code';
-            Alert.alert('Error', message);
+            setModalConfig({
+                visible: true,
+                title: 'Error',
+                message: message,
+                type: 'error'
+            });
         }
     };
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+            <LinearGradient colors={[NAVY, NAVY_MID, '#09101d']} style={styles.background} />
 
-            <LinearGradient
-                colors={Colors.gradient}
-                locations={Colors.locations}
-                style={styles.background}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            <MessageModal
+                visible={modalConfig.visible}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                type={modalConfig.type}
+                onClose={() => {
+                    setModalConfig(prev => ({ ...prev, visible: false }));
+                    if (modalConfig.onClose) modalConfig.onClose();
+                }}
+                buttonText={modalConfig.type === 'success' ? 'Enter Code' : 'OK'}
             />
 
             <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                >
-                    <Icon name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} />
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                    <Icon name="arrow-back-ios" size={20} color={GOLD} style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Forgot Password</Text>
+                <Text style={styles.headerTitle}>SECURE RECOVERY</Text>
                 <View style={{ width: 44 }} />
             </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                style={{ flex: 1 }}
-            >
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
                     <View style={styles.contentContainer}>
                         <View style={styles.iconWrapper}>
-                            <Icon name="lock-reset" size={64} color="#6366f1" />
+                            <Icon name="lock-reset" size={56} color={GOLD} />
                         </View>
 
-                        <Text style={styles.title}>Reset Your Password</Text>
+                        <Text style={styles.title}>Reset Password</Text>
                         <Text style={styles.subtitle}>
-                            Enter your email address below and we'll send you a 6-digit code to reset your password.
+                            Enter your registered email address to receive a 6-digit verification code.
                         </Text>
 
-                        <GlassView blurType="light" blurAmount={50} style={styles.glassPanel}>
+                        <View style={styles.panel}>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>EMAIL ADDRESS</Text>
+                                <Text style={styles.label}>BUSINESS EMAIL</Text>
                                 <View style={styles.inputContainer}>
-                                    <Icon name="email" size={20} color="#94a3b8" style={styles.inputIcon} />
+                                    <Icon name="email" size={20} color={GOLD} style={styles.inputIcon} />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Enter your email"
-                                        placeholderTextColor="#cbd5e1"
+                                        placeholder="email@company.com"
+                                        placeholderTextColor={TEXT_MUTED}
                                         keyboardType="email-address"
                                         autoCapitalize="none"
                                         value={email}
-                                        onChangeText={setEmail}
+                                        onChangeText={(v) => {
+                                            setEmail(v);
+                                            if (fieldError) setFieldError('');
+                                        }}
                                     />
                                 </View>
+                                {fieldError ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingLeft: 2 }}>
+                                        <Icon name="error-outline" size={12} color="#F87171" />
+                                        <Text style={{ color: '#F87171', fontSize: 12, fontWeight: '600' }}>{fieldError}</Text>
+                                    </View>
+                                ) : null}
                             </View>
 
-                            <TouchableOpacity
-                                style={styles.sendButton}
-                                onPress={handleSendCode}
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <ActivityIndicator color="white" />
-                                ) : (
-                                    <Text style={styles.sendButtonText}>SEND RESET CODE</Text>
-                                )}
+                            <TouchableOpacity style={styles.sendButton} onPress={handleSendCode} disabled={loading}>
+                                <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={styles.btnGradient}>
+                                    {loading ? <ActivityIndicator color={NAVY} /> : <Text style={styles.sendButtonText}>SEND VERIFICATION CODE</Text>}
+                                </LinearGradient>
                             </TouchableOpacity>
-                        </GlassView>
+                        </View>
 
-                        <TouchableOpacity
-                            style={styles.loginLink}
-                            onPress={() => navigation.reset({ index: 0, routes: [{ name: 'index' }] })}
-                        >
-                            <Text style={styles.loginLinkText}>Back to Login</Text>
+                        <TouchableOpacity style={styles.loginLink} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'index' }] })}>
+                            <Text style={styles.loginLinkText}>Remembered? <Text style={{ color: GOLD }}>Back to Login</Text></Text>
                         </TouchableOpacity>
                     </View>
-
                 </ScrollView>
             </KeyboardAvoidingView>
         </View>
@@ -137,59 +162,25 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    background: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        paddingTop: 60,
-        paddingBottom: 10,
-    },
-    backButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
-    },
-    headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#475569', letterSpacing: -0.5 },
-    scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 40 },
+    container: { flex: 1, backgroundColor: NAVY },
+    background: { ...StyleSheet.absoluteFillObject },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 10 },
+    backButton: { width: 44, height: 44, borderRadius: 12, backgroundColor: NAVY_INPUT, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER },
+    headerTitle: { fontSize: 13, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1.5 },
+    scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 20 },
     contentContainer: { alignItems: 'center', width: '100%', maxWidth: 400, alignSelf: 'center' },
-    iconWrapper: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: 'rgba(255,255,255,0.6)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 24,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.8)',
-    },
-    title: { fontSize: 24, fontWeight: '800', color: '#1e293b', marginBottom: 12, textAlign: 'center' },
-    subtitle: { fontSize: 14, fontWeight: '500', color: '#64748b', textAlign: 'center', marginBottom: 32, lineHeight: 22 },
-    glassPanel: {
-        width: '100%',
-        borderRadius: 24,
-        padding: 24,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        backgroundColor: 'rgba(255,255,255,0.4)',
-        gap: 20,
-    },
-    inputGroup: { gap: 8 },
-    label: { fontSize: 11, fontWeight: 'bold', color: '#475569', paddingHorizontal: 4, letterSpacing: 1 },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.5)', borderRadius: 16, height: 56, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.6)' },
-    inputIcon: { marginLeft: 16, opacity: 0.6 },
-    input: { flex: 1, height: '100%', paddingLeft: 12, paddingRight: 16, fontSize: 15, fontWeight: '600', color: '#1e293b' },
-    sendButton: { height: 56, borderRadius: 16, backgroundColor: '#0f172a', justifyContent: 'center', alignItems: 'center', shadowColor: '#0f172a', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 },
-    sendButtonText: { color: 'white', fontWeight: 'bold', fontSize: 14, letterSpacing: 1 },
+    iconWrapper: { width: 110, height: 110, borderRadius: 55, backgroundColor: NAVY_INPUT, justifyContent: 'center', alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: NAVY_BORDER, shadowColor: GOLD, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 16 },
+    title: { fontSize: 28, fontWeight: '800', color: TEXT_PRIMARY, marginBottom: 8, textAlign: 'center' },
+    subtitle: { fontSize: 14, fontWeight: '500', color: TEXT_MUTED, textAlign: 'center', marginBottom: 32, lineHeight: 22, paddingHorizontal: 20 },
+    panel: { width: '100%', borderRadius: 32, padding: 24, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, gap: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.2, shadowRadius: 24, elevation: 10 },
+    inputGroup: { gap: 10 },
+    label: { fontSize: 10, fontWeight: '900', color: GOLD, paddingHorizontal: 4, letterSpacing: 1.5 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: NAVY_INPUT, borderRadius: 16, height: 60, borderWidth: 1, borderColor: NAVY_BORDER },
+    inputIcon: { marginLeft: 16 },
+    input: { flex: 1, height: '100%', paddingLeft: 12, paddingRight: 16, fontSize: 15, fontWeight: '600', color: TEXT_PRIMARY },
+    sendButton: { height: 60, borderRadius: 16, overflow: 'hidden', shadowColor: GOLD, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 },
+    btnGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    sendButtonText: { color: NAVY, fontWeight: '900', fontSize: 14, letterSpacing: 1 },
     loginLink: { marginTop: 32, padding: 8 },
-    loginLinkText: { fontSize: 14, fontWeight: '700', color: '#6366f1' },
+    loginLinkText: { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
 });

@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import GlassView from '../components/GlassView';
 import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,6 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { B2B } from '../constants/Colors';
+
+const { GOLD, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, TEXT_PRIMARY, TEXT_MUTED } = B2B;
 
 interface BottomNavProps {
     activeTab: 'Home' | 'Catalog' | 'Orders' | 'Account' | 'Saved' | 'Profile' | 'Notifications';
@@ -35,10 +37,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
     const navItems = [
         { id: 'Home', icon: 'home', label: 'HOME', route: '/home' },
         { id: 'Catalog', icon: 'grid-view', label: 'CATALOG', route: '/catalog' },
-        // { id: 'Notifications', icon: 'notifications-none', label: 'ALERTS', route: '/notifications' },
         { id: 'Saved', icon: 'favorite-border', label: 'SAVED', route: '/favorites' },
-        { id: 'Orders', icon: 'shopping-cart', label: 'ORDERS', route: '/cart' },
-        { id: 'Account', icon: 'account-circle', label: 'ACCOUNT', route: '/profile' },
+        { id: 'Orders', icon: 'shopping-cart', label: 'CART', route: '/cart' }, // Changed label to CART for clarity
+        { id: 'Account', icon: 'account-circle', label: 'PROFILE', route: '/profile' },
     ];
 
     const isActive = (itemId: string) => {
@@ -47,11 +48,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
         return false;
     };
 
-    // Some screens use 'Profile' instead of 'Account', 'Saved' instead of 'Favorites' etc. 
-    // We'll normalize these labels for the UI but keep routes consistent.
-
     return (
-        <GlassView blurType="light" blurAmount={90} style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+        <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 20) }]}>
             {navItems.map((item) => (
                 <TouchableOpacity
                     key={item.id}
@@ -64,11 +62,11 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
                         }
                     }}
                 >
-                    <View>
+                    <View style={styles.iconWrapper}>
                         <Icon
                             name={item.icon as any}
                             size={24}
-                            color={isActive(item.id) ? '#4A90E2' : '#94a3b8'}
+                            color={isActive(item.id) ? GOLD : '#5a6b8e'}
                         />
                         {item.id === 'Orders' && cartCount > 0 && (
                             <View style={styles.badgeCount}>
@@ -81,12 +79,13 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
                             </View>
                         )}
                     </View>
-                    <Text style={[styles.navText, isActive(item.id) && { color: '#4A90E2' }]}>
+                    <Text style={[styles.navText, isActive(item.id) && { color: GOLD }]}>
                         {item.label}
                     </Text>
+                    {isActive(item.id) && <View style={styles.activeIndicator} />}
                 </TouchableOpacity>
             ))}
-        </GlassView>
+        </View>
     );
 };
 
@@ -98,46 +97,56 @@ const styles = StyleSheet.create({
         right: 0,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
         paddingTop: 16,
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
+        backgroundColor: '#0a101a', // Deeper navy for bottom nav
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.5)',
-        backgroundColor: 'rgba(255,255,255,0.6)',
-        shadowColor: '#6366f1',
-        shadowOffset: { width: 0, height: -8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 10,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -12 },
+        shadowOpacity: 0.3,
+        shadowRadius: 24,
+        elevation: 15,
     },
     navItem: {
         alignItems: 'center',
-        gap: 4,
+        paddingHorizontal: 8,
+    },
+    iconWrapper: {
+        marginBottom: 4,
+        position: 'relative',
     },
     navText: {
-        fontSize: 9,
-        fontWeight: 'bold',
-        color: '#94a3b8',
+        fontSize: 8,
+        fontWeight: '900',
+        color: '#5a6b8e',
         letterSpacing: 1,
+    },
+    activeIndicator: {
+        width: 12,
+        height: 2,
+        backgroundColor: GOLD,
+        borderRadius: 1,
+        marginTop: 6,
     },
     badgeCount: {
         position: 'absolute',
-        top: -6,
-        right: -6,
-        backgroundColor: '#6366f1',
-        width: 18,
-        height: 18,
-        borderRadius: 9,
+        top: -4,
+        right: -8,
+        backgroundColor: GOLD,
+        minWidth: 16,
+        height: 16,
+        borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: 'white',
+        borderWidth: 1.5,
+        borderColor: '#0a101a',
+        paddingHorizontal: 2,
     },
     badgeText: {
-        color: 'white',
-        fontSize: 9,
-        fontWeight: 'bold',
+        color: NAVY,
+        fontSize: 8,
+        fontWeight: '900',
     },
 });
 

@@ -2,11 +2,12 @@
 import { Platform } from 'react-native';
 
 // Base URL for the backend server
-export const BASE_URL = 'http://192.168.1.4:5001';
+// export const BASE_URL = 'http://192.168.1.4:5001/api/v1/';
+export const BASE_URL = 'https://sv.riolls.com/api/v1';
 
 // Base API URL - configures based on platform
 // Using LAN IP for all physical devices (iOS & Android) to ensure connectivity
-export const API_BASE_URL = `${BASE_URL}/api/v1`;
+export const API_BASE_URL = `${BASE_URL}`;
 
 // Health check endpoint
 export const API_HEALTH_URL = `${BASE_URL}/health`;

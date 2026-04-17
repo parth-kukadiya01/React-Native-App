@@ -1,11 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
-import GlassView from '../components/GlassView';
 import Icon from '../components/Icon';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
+import { B2B } from '../constants/Colors';
+
+const { GOLD, NAVY, NAVY_CARD, NAVY_BORDER, TEXT_PRIMARY } = B2B;
 
 interface ScreenHeaderProps {
     title?: string;
@@ -31,11 +33,11 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     const { cartCount } = useCart();
 
     return (
-        <GlassView blurType="light" blurAmount={80} style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
             <View style={styles.headerLeft}>
                 {showBack && (
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
-                        <Icon name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} />
+                        <Icon name="arrow-back-ios" size={20} color={GOLD} style={{ marginLeft: 6 }} />
                     </TouchableOpacity>
                 )}
 
@@ -62,20 +64,20 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
             <View style={styles.headerRight}>
                 {showSearch && (
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('search' as any)}>
-                        <Icon name="search" size={24} color="#475569" />
+                        <Icon name="search" size={24} color={GOLD} />
                     </TouchableOpacity>
                 )}
 
                 {showNotification && (
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('notifications' as any)}>
-                        <Icon name="notifications-none" size={24} color="#475569" />
+                        <Icon name="notifications-none" size={24} color={GOLD} />
                         <View style={styles.notificationDot} />
                     </TouchableOpacity>
                 )}
 
                 {showCart && (
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('cart' as any)}>
-                        <Icon name="shopping-bag" size={22} color="#475569" />
+                        <Icon name="shopping-bag" size={22} color={GOLD} />
                         {cartCount > 0 && (
                             <View style={styles.cartBadge}>
                                 <Text style={styles.cartBadgeText}>{cartCount}</Text>
@@ -86,24 +88,20 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
 
                 {rightElement}
             </View>
-        </GlassView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     header: {
-        paddingBottom: 8,
+        paddingBottom: 10,
         paddingHorizontal: 20,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.4)',
-        // position: 'absolute',
-        // top: 0,
-        // left: 0,
-        // right: 0,
-        // zIndex: 100,
+        borderBottomColor: NAVY_BORDER,
+        backgroundColor: NAVY,
     },
     headerLeft: {
         flexDirection: 'row',
@@ -121,24 +119,24 @@ const styles = StyleSheet.create({
         height: 44,
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
+        borderColor: NAVY_BORDER,
     },
     portalText: {
         fontSize: 10,
-        fontWeight: '800',
-        color: '#64748b',
+        fontWeight: '900',
+        color: GOLD,
         textTransform: 'uppercase',
         letterSpacing: 1.5,
     },
     brandText: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#0f172a',
+        color: TEXT_PRIMARY,
     },
     headerTitle: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '900',
-        color: '#475569',
+        color: GOLD,
         letterSpacing: 2,
         textTransform: 'uppercase',
     },
@@ -149,12 +147,12 @@ const styles = StyleSheet.create({
     iconButton: {
         width: 44,
         height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.4)',
+        borderRadius: 14,
+        backgroundColor: NAVY_CARD,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.5)',
+        borderColor: NAVY_BORDER,
     },
     notificationDot: {
         position: 'absolute',
@@ -165,25 +163,26 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         backgroundColor: '#fb7185',
         borderWidth: 1,
-        borderColor: 'white',
+        borderColor: NAVY,
     },
     cartBadge: {
         position: 'absolute',
-        top: 4,
-        right: 4,
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: '#fb7185',
+        top: -2,
+        right: -2,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: GOLD,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'white',
+        borderWidth: 1.5,
+        borderColor: NAVY,
+        paddingHorizontal: 4,
     },
     cartBadgeText: {
-        color: 'white',
+        color: NAVY,
         fontSize: 9,
-        fontWeight: 'bold',
+        fontWeight: '900',
     },
 });
 
