@@ -17,6 +17,7 @@ interface ScreenHeaderProps {
     showNotification?: boolean;
     showCart?: boolean;
     rightElement?: React.ReactNode;
+    onPressBack?: () => void;
 }
 
 const ScreenHeader: React.FC<ScreenHeaderProps> = ({
@@ -26,7 +27,8 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     showSearch = false,
     showNotification = false,
     showCart = false,
-    rightElement
+    rightElement,
+    onPressBack
 }) => {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const insets = useSafeAreaInsets();
@@ -36,7 +38,7 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
             <View style={styles.headerLeft}>
                 {showBack && (
-                    <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
+                    <TouchableOpacity style={styles.iconButton} onPress={onPressBack || (() => navigation.goBack())}>
                         <Icon name="arrow-back-ios" size={20} color={GOLD} style={{ marginLeft: 6 }} />
                     </TouchableOpacity>
                 )}

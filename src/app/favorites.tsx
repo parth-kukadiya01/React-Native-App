@@ -102,7 +102,7 @@ export default function FavoritesScreen() {
             activeOpacity={0.9}
         >
             <View style={styles.imageContainer}>
-                <Image source={{ uri: item.image }} style={styles.productImage} resizeMode="contain" />
+                <Image source={{ uri: item.image }} style={styles.productImage} />
                 <TouchableOpacity
                     style={styles.favoriteButton}
                     onPress={() => removeFavorite((item.id || item._id).toString())}
@@ -115,14 +115,14 @@ export default function FavoritesScreen() {
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
 
                 <View style={styles.weightRow}>
-                    <View style={styles.weightItem}>
-                        <Text style={styles.weightLabel}>NET WT</Text>
-                        <Text style={styles.weightValue}>{item.netWt}g</Text>
-                    </View>
-                    <View style={styles.weightItem}>
+                    {/* <View style={styles.weightItem}> */}
+                    <Text style={styles.weightLabel}>NET WT</Text>
+                    <Text style={styles.weightValue}>{item.netWt}g</Text>
+                    {/* </View> */}
+                    {/* <View style={styles.weightItem}>
                         <Text style={styles.weightLabel}>GROSS WT</Text>
                         <Text style={styles.weightValue}>{item.grossWt}g</Text>
-                    </View>
+                    </View> */}
                 </View>
 
                 <View style={styles.materialRow}>
@@ -149,15 +149,15 @@ export default function FavoritesScreen() {
                 }}
             />
 
-            <ScreenHeader showBack title="Curated Favorites" showCart />
+            <ScreenHeader showBack title="Favorites" showCart onPressBack={() => navigation.replace('home' as any)} />
 
-            <View style={styles.headerFilters}>
+            {/* <View style={styles.headerFilters}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
                     <TouchableOpacity style={[styles.filterChip, styles.activeFilterChip]}>
                         <Text style={[styles.filterText, styles.activeFilterText]}>ALL SAVED ITEMS</Text>
                     </TouchableOpacity>
                 </ScrollView>
-            </View>
+            </View> */}
 
             {loading ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -205,19 +205,22 @@ const styles = StyleSheet.create({
     activeFilterChip: { backgroundColor: GOLD, borderColor: GOLD, shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
     filterText: { fontSize: 10, fontWeight: '800', color: TEXT_MUTED, letterSpacing: 1, textTransform: 'uppercase' },
     activeFilterText: { color: NAVY, fontWeight: '900' },
-    gridContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 160 },
-    gridColumn: { justifyContent: 'space-between', marginBottom: 16 },
-    productCard: { borderRadius: 24, padding: 10, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 5 },
-    imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', position: 'relative', marginBottom: 12, backgroundColor: NAVY_INPUT },
-    productImage: { position: 'absolute', width: '100%', height: '100%' },
+    gridContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 100 },
+    gridColumn: { justifyContent: 'space-between', marginBottom: 20 },
+    // productCard: { borderRadius: 24, padding: 10, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 5 },
+    productCard: { backgroundColor: NAVY_CARD, borderRadius: 24, padding: 10, borderWidth: 1, borderColor: NAVY_BORDER },
+    // imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: NAVY_INPUT },
+    imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: '#000' },
+    // productImage: { position: 'absolute', width: '100%', height: '100%' },
+    productImage: { ...StyleSheet.absoluteFillObject },
     favoriteButton: { position: 'absolute', top: 8, right: 8, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-    productInfo: { paddingHorizontal: 4 },
-    productName: { fontSize: 14, fontWeight: '800', color: TEXT_PRIMARY, marginBottom: 8, letterSpacing: -0.2 },
-    weightRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, paddingVertical: 8, borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    productInfo: { padding: 8, },
+    productName: { fontSize: 14, fontWeight: '500', color: TEXT_PRIMARY, },
+    weightRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: 'rgba(232,201,122,0.1)' },
     weightItem: { alignItems: 'center' },
-    weightLabel: { fontSize: 8, fontWeight: '900', color: GOLD, letterSpacing: 1, marginBottom: 2 },
+    weightLabel: { fontSize: 8, fontWeight: '900', color: GOLD_LIGHT },
     weightValue: { fontSize: 13, fontWeight: '700', color: TEXT_PRIMARY },
-    materialRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    materialRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
     materialDot: { width: 6, height: 6, borderRadius: 3, borderWidth: 1, borderColor: GOLD_LIGHT },
     materialText: { fontSize: 11, fontWeight: '600', color: TEXT_MUTED },
     emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(201,168,76,0.05)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(201,168,76,0.1)' },

@@ -39,10 +39,10 @@ export default function CartToast({ visible, cartCount, onViewCart, onDismiss }:
                 friction: 10,
             }).start();
 
-            // Auto-dismiss after 4 seconds
+            // Auto-dismiss after 5 seconds
             const timer = setTimeout(() => {
                 slideOut();
-            }, 4000);
+            }, 5000);
 
             return () => clearTimeout(timer);
         }
@@ -98,8 +98,10 @@ export default function CartToast({ visible, cartCount, onViewCart, onDismiss }:
                         end={{ x: 1, y: 0 }}
                         style={styles.viewCartGradient}
                     >
-                        <Text style={styles.viewCartText}>View Cart</Text>
-                        <Icon name="arrow-forward-ios" size={12} color={NAVY} />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, margin: 8, }}>
+                            <Text style={styles.viewCartText}>View Cart</Text>
+                            <Icon name="arrow-forward-ios" size={12} color={NAVY} />
+                        </View>
                     </LinearGradient>
                 </TouchableOpacity>
             </View>
@@ -183,13 +185,15 @@ const styles = StyleSheet.create({
     viewCartBtn: {
         borderRadius: 12,
         overflow: 'hidden',
+        backgroundColor: 'red',
+        // paddingHorizontal: 14,
     },
     viewCartGradient: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
+        // flexDirection: 'row',
+        // alignItems: 'center',
+        // gap: 4,
+        // paddingHorizontal: 14,
+        // paddingVertical: 10,
     },
     viewCartText: {
         fontSize: 12,

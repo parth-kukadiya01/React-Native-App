@@ -18,7 +18,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { B2B } from '../constants/Colors';
 import ProductCard from '../components/ProductCard';
-import BottomNav from '../components/BottomNav';
 import { useCart } from '../context/CartContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { productService } from '../services/productService';
@@ -179,7 +178,8 @@ export default function SearchScreen() {
                     const allProducts = fallbackRes.data.data?.products || [];
                     const filtered = allProducts.filter((p: any) =>
                         p.name?.toLowerCase().includes(term.toLowerCase()) ||
-                        p.sku?.toLowerCase().includes(term.toLowerCase())
+                        p.tagNumber?.toLowerCase().includes(term.toLowerCase()) ||
+                        p.designNumber?.toLowerCase().includes(term.toLowerCase())
                     );
                     setResults(filtered);
                 }
@@ -323,7 +323,7 @@ export default function SearchScreen() {
                         <Icon name="search" size={20} color={GOLD} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Find gold ornaments, SKU..."
+                            placeholder="Name, Tag No., Design No..."
                             placeholderTextColor={TEXT_MUTED}
                             value={query}
                             onChangeText={setQuery}
@@ -338,12 +338,12 @@ export default function SearchScreen() {
                         )}
                     </View>
 
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                         style={[styles.filterButton, showFilters && styles.filterButtonActive]}
                         onPress={() => setShowFilters(!showFilters)}
                     >
                         <Icon name="tune" size={20} color={showFilters ? NAVY : GOLD} />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                 </View>
 
                 {/* Categories Flow */}
@@ -352,12 +352,12 @@ export default function SearchScreen() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.chipsContainer}
                 >
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                         style={[styles.chip, !selectedCategory && styles.activeChip]}
                         onPress={() => handleFilterByCategory(null)}
                     >
                         <Text style={[styles.chipText, !selectedCategory && styles.activeChipText]}>Catalog</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                     {categories.map(cat => {
                         const isCatActive = selectedCategory === (cat._id || cat.id);
                         return (
@@ -423,7 +423,7 @@ export default function SearchScreen() {
                     <>
                         <View style={styles.resultHeader}>
                             <Text style={styles.resultCount}>
-                                {results.length} SKU{results.length === 1 ? '' : 's'} cataloged
+                                {results.length} result{results.length === 1 ? '' : 's'} found
                                 {selectedCategoryName ? ` in ${selectedCategoryName}` : ''}
                             </Text>
                         </View>
@@ -486,28 +486,28 @@ export default function SearchScreen() {
                         )}
 
                         <View style={styles.sectionContainer}>
-                            <Text style={styles.sectionTitle}>CURATED SELECTION</Text>
-                            {loadingRecommendations ? (
-                                <ActivityIndicator size="small" color={GOLD} style={{ marginTop: 20 }} />
-                            ) : recommendations.length > 0 ? (
-                                <FlatList
-                                    data={recommendations}
-                                    renderItem={renderProduct}
-                                    keyExtractor={item => (item._id || item.id || Math.random()).toString()}
-                                    numColumns={2}
-                                    scrollEnabled={false}
-                                    columnWrapperStyle={styles.gridColumn}
-                                    contentContainerStyle={styles.gridContent}
-                                />
-                            ) : (
-                                <Text style={styles.emptySubtitle}>No recommendations available in current catalog.</Text>
-                            )}
+                            <Text style={styles.sectionTitle}>SELECTION</Text>
                         </View>
+                        {loadingRecommendations ? (
+                            <ActivityIndicator size="small" color={GOLD} style={{ marginTop: 20 }} />
+                        ) : recommendations.length > 0 ? (
+                            <FlatList
+                                data={recommendations}
+                                renderItem={renderProduct}
+                                keyExtractor={item => (item._id || item.id || Math.random()).toString()}
+                                numColumns={2}
+                                scrollEnabled={false}
+                                columnWrapperStyle={styles.gridColumn}
+                                contentContainerStyle={styles.gridContent}
+                            />
+                        ) : (
+                            <Text style={styles.emptySubtitle}>No recommendations available in current catalog.</Text>
+                        )}
+
                     </>
                 )}
             </ScrollView>
 
-            <BottomNav activeTab="Home" />
         </View>
     );
 }
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
     },
     sectionContainer: {
         paddingHorizontal: 20,
-        marginBottom: 32,
+        marginBottom: 20,
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -727,10 +727,10 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: 11,
-        fontWeight: '900',
+        fontSize: 12,
+        fontWeight: '800',
         color: GOLD,
-        letterSpacing: 2,
+        letterSpacing: 1,
         textTransform: 'uppercase',
     },
     clearText: {

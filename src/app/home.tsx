@@ -171,7 +171,7 @@ export default function HomeScreen() {
 
                     <View style={styles.headerInfo}>
                         <Text style={styles.brandTitle}>SV GOLD</Text>
-                        <Text style={styles.portalSubtitle}>WHOLESALE HUB</Text>
+                        <Text style={styles.portalSubtitle}> JO JO KADALI</Text>
                     </View>
 
                     <View style={styles.headerActions}>
@@ -316,7 +316,7 @@ export default function HomeScreen() {
                                     <Image source={{ uri: getImageUrl(item.image || item.images?.[0]) }} style={styles.historyImg} />
                                     <View style={styles.historyInfo}>
                                         <Text style={styles.historyTitle} numberOfLines={1}>{item.name}</Text>
-                                        <Text style={styles.historyRef}>Ref: {item.sku || 'N/A'}</Text>
+                                        <Text style={styles.historyRef}>DESIGN NO. {item.designNumber || item.ref || 'N/A'}</Text>
                                     </View>
                                     <Icon name="chevron-right" size={20} color={GOLD_LIGHT} />
                                 </TouchableOpacity>

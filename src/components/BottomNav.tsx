@@ -55,10 +55,22 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
                     key={item.id}
                     style={styles.navItem}
                     onPress={() => {
-                        if (item.id === 'Catalog') {
-                            navigation.navigate('catalog' as any, { categoryId: null, categoryName: 'All', timestamp: Date.now() });
+                        const targetRoute = item.id === 'Catalog' ? 'catalog' : item.route.replace('/', '');
+                        const params = item.id === 'Catalog' ? { categoryId: null, categoryName: 'All', timestamp: Date.now() } : undefined;
+
+                        if (targetRoute === 'home') {
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'home' }],
+                            });
                         } else {
-                            navigation.navigate(item.route.replace('/', '') as any);
+                            navigation.reset({
+                                index: 1,
+                                routes: [
+                                    { name: 'home' },
+                                    { name: targetRoute, params: params as any },
+                                ],
+                            });
                         }
                     }}
                 >

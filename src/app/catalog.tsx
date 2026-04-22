@@ -183,7 +183,8 @@ export default function CatalogScreen() {
 
             <View style={styles.productInfo}>
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.skuText}>REF: {item.ref || item.sku}</Text>
+                <Text style={styles.designText}>DESIGN NO. {item.designNumber || item.ref || 'N/A'}</Text>
+                <Text style={styles.tagText}>TAG NO. {item.tagNumber || 'N/A'}</Text>
                 <View style={styles.weightRow}>
                     <Text style={styles.weightLabel}>NET WT</Text>
                     <Text style={styles.weightValue}>{item.netWt} GM</Text>
@@ -209,7 +210,7 @@ export default function CatalogScreen() {
 
             <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <View style={styles.topBar}>
-                    <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
+                    <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.replace('home' as any)}>
                         <Icon name="arrow-back-ios" size={20} color={GOLD} style={{ marginLeft: 6 }} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>COLLECTIONS</Text>
@@ -348,9 +349,10 @@ const styles = StyleSheet.create({
     imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: '#000' },
     productImage: { ...StyleSheet.absoluteFillObject },
     favoriteButton: { position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-    productInfo: { padding: 8, gap: 4 },
-    productName: { fontSize: 14, fontWeight: '300', color: TEXT_PRIMARY },
-    skuText: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 0.5 },
+    productInfo: { padding: 8, },
+    productName: { fontSize: 14, fontWeight: '500', color: TEXT_PRIMARY },
+    designText: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 0.5 },
+    tagText: { fontSize: 9, fontWeight: '900', color: '#6366f1', letterSpacing: 0.5, marginTop: 2 },
     weightRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: 'rgba(232,201,122,0.1)' },
     weightLabel: { fontSize: 8, fontWeight: '900', color: GOLD_LIGHT },
     weightValue: { fontSize: 11, fontWeight: '800', color: TEXT_PRIMARY },

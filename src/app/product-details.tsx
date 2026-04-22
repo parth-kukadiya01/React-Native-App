@@ -80,7 +80,6 @@ export default function ProductDetailsScreen() {
     const [quantity, setQuantity] = useState(1);
     const [addingToCart, setAddingToCart] = useState(false);
 
-    console.log("product", product);
 
     // Cart Toast state (replaces the 'Added to Cart' popup)
     const [showCartToast, setShowCartToast] = useState(false);
@@ -255,12 +254,19 @@ export default function ProductDetailsScreen() {
                             onRequestClose={() => setIsVisible(false)}
                         />
 
-                        {/* Title & SKU Area */}
+                        {/* Title, Design Number & Tag Number Area */}
                         <View style={styles.metaRow}>
                             <View style={styles.titleCol}>
                                 <Text style={styles.productName}>{product?.name || name}</Text>
-                                <View style={styles.refBadge}>
-                                    <Text style={styles.refText}>IDENTIFIER: {product?.sku || ref || 'N/A'}</Text>
+                                <View style={styles.identifierRow}>
+                                    <View style={styles.refBadge}>
+                                        <Text style={styles.refLabel}>DESIGN NO.</Text>
+                                        <Text style={styles.refText}>{product?.designNumber || ref || 'N/A'}</Text>
+                                    </View>
+                                    <View style={[styles.refBadge, styles.tagBadge]}>
+                                        <Text style={styles.refLabel}>TAG NO.</Text>
+                                        <Text style={styles.refText}>{product?.tagNumber || 'N/A'}</Text>
+                                    </View>
                                 </View>
                             </View>
                             <View style={styles.stockStatus}>
@@ -287,7 +293,7 @@ export default function ProductDetailsScreen() {
                                 </View>
                             </View>
 
-                            <View style={styles.infoCard}>
+                            {/* <View style={styles.infoCard}>
                                 <View style={styles.infoRow}>
                                     <Text style={styles.infoLabel}>METAL COMPOSITION</Text>
                                     <Text style={styles.infoValue}>{product?.materials?.[0] || 'GOLD'}</Text>
@@ -306,7 +312,7 @@ export default function ProductDetailsScreen() {
                                         </View>
                                     </>
                                 )}
-                            </View>
+                            </View> */}
                         </View>
 
                         {/* Configuration Selectors */}
@@ -334,9 +340,9 @@ export default function ProductDetailsScreen() {
                             <View style={styles.configCard}>
                                 <Text style={styles.configTitle}>GOLD PURITY</Text>
                                 <View style={styles.optionsRow}>
-                                    {(product?.availablePurity && product.availablePurity.length > 0
-                                        ? product.availablePurity
-                                        : ['18k', '22k']
+                                    {(product?.category?.name === 'Kadali'
+                                        ? ['18k', '22k']
+                                        : ['9k', '14k', '18k', '22k']
                                     ).map((p: string) => {
                                         const active = (selectedPurity || '').toLowerCase() === p.toLowerCase();
                                         return (
@@ -518,16 +524,21 @@ const styles = StyleSheet.create({
     },
     titleCol: { flex: 1, marginRight: 15 },
     productName: { fontSize: 28, fontWeight: '300', color: TEXT_PRIMARY, lineHeight: 36, letterSpacing: -0.5 },
+    identifierRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 10 },
     refBadge: {
         backgroundColor: 'rgba(232,201,122,0.05)',
         paddingVertical: 5,
         paddingHorizontal: 10,
         borderRadius: 6,
         alignSelf: 'flex-start',
-        marginTop: 10,
         borderWidth: 0.5,
         borderColor: 'rgba(232,201,122,0.2)',
     },
+    tagBadge: {
+        backgroundColor: 'rgba(99,102,241,0.07)',
+        borderColor: 'rgba(99,102,241,0.3)',
+    },
+    refLabel: { fontSize: 7, fontWeight: '900', color: GOLD, letterSpacing: 1, marginBottom: 2 },
     refText: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1 },
     stockStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8 },
     pulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10b981' },

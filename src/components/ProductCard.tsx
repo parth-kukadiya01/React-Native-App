@@ -23,7 +23,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ item, width = DEFAULT_CARD_WI
         navigation.navigate('product-details' as any, {
             id: item.id || item._id,
             name: item.name,
-            ref: item.sku || item.ref,
+            ref: item.tagNumber || item.designNumber || item.ref,
             netWt: item.netWt,
             grossWt: item.grossWt,
             image: item.images?.[0] || item.image
@@ -56,7 +56,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ item, width = DEFAULT_CARD_WI
 
             <View style={styles.productInfo}>
                 <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.productRef}>SKU: {item.sku || item.ref}</Text>
+                <Text style={styles.productRef}>DESIGN NO. {item.designNumber || item.ref || 'N/A'}</Text>
+                <Text style={styles.productTag}>TAG NO. {item.tagNumber || 'N/A'}</Text>
 
                 <View style={styles.materialRow}>
                     <View style={[styles.materialDot, { backgroundColor: GOLD }]} />
@@ -142,6 +143,13 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: TEXT_MUTED,
         marginTop: 2,
+        marginBottom: 2,
+        letterSpacing: 0.5,
+    },
+    productTag: {
+        fontSize: 9,
+        fontWeight: '700',
+        color: '#6366f1',
         marginBottom: 8,
         letterSpacing: 0.5,
     },

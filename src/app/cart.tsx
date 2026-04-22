@@ -328,7 +328,8 @@ export default function CartScreen() {
                                     <View style={styles.itemHeader}>
                                         <View style={{ flex: 1 }}>
                                             <Text style={styles.itemName} numberOfLines={1}>{item.product?.name || 'Unknown Product'}</Text>
-                                            <Text style={styles.itemSku}>{item.product?.sku || 'NO-SKU'}</Text>
+                                            <Text style={styles.itemRef}>DESIGN NO. {item.product?.designNumber || 'N/A'}</Text>
+                                            <Text style={styles.itemRef}>TAG NO. {item.product?.tagNumber || 'N/A'}</Text>
                                         </View>
                                         <TouchableOpacity style={styles.removeButton} onPress={() => removeItem(item._id)}>
                                             <Icon name="close" size={20} color={TEXT_MUTED} />
@@ -367,16 +368,13 @@ export default function CartScreen() {
 
                             {item.description ? (
                                 <View style={styles.itemNoteRow}>
-                                    <Text style={styles.controlLabel}>NOTE</Text>
-                                    <View style={styles.noteDisplay}>
-                                        <Text style={styles.noteText}>{item.description}</Text>
-                                    </View>
+                                    <Text style={styles.controlLabel}>NOTE :  <Text style={styles.noteText}>{item.description}</Text></Text>
+
                                 </View>
                             ) : null}
 
-                            <View style={styles.itemDateRow}>
-                                <Text style={styles.controlLabel}>DATE ADDED: </Text>
-                                <Text style={styles.dateTextSmall}>{new Date(item.createdAt || Date.now()).toLocaleDateString()}</Text>
+                            <View style={styles.itemNoteRow}>
+                                <Text style={styles.controlLabel}>DATE ADDED :  <Text style={styles.dateTextSmall}>{new Date(item.createdAt || Date.now()).toLocaleDateString()}</Text></Text>
                             </View>
 
                             <View style={styles.itemWeights}>
@@ -686,11 +684,10 @@ const styles = StyleSheet.create({
         color: TEXT_PRIMARY,
         marginBottom: 4,
     },
-    itemSku: {
+    itemRef: {
         fontSize: 11,
         fontWeight: '800',
         color: TEXT_MUTED,
-        textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     removeButton: {
@@ -730,8 +727,7 @@ const styles = StyleSheet.create({
         fontSize: 9,
         fontWeight: '900',
         color: TEXT_MUTED,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
+        // letterSpacing: 1,
     },
     dateDisplay: {
         height: 44,
@@ -784,6 +780,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: TEXT_PRIMARY,
         lineHeight: 18,
+        fontWeight: '700',
     },
     itemDateRow: {
         flexDirection: 'row',
@@ -792,7 +789,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     dateTextSmall: {
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: '700',
         color: TEXT_PRIMARY,
     },

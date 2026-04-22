@@ -23,7 +23,6 @@ import { useCart } from '../context/CartContext';
 import { storage } from '../services/storage';
 import { API_BASE_URL, getImageUrl } from '../constants/api';
 import MessageModal from '../components/MessageModal';
-import BottomNav from '../components/BottomNav';
 import { B2B } from '../constants/Colors';
 import ScreenHeader from '../components/ScreenHeader';
 
@@ -91,7 +90,7 @@ export default function OrderHistoryScreen() {
         fetchOrders();
     }, []);
 
-    const handleDownloadInvoice = async (orderId: string) => {
+    const handleDownloadInvoice = async (dbId: string, logicalId: string) => {
         try {
             const token = await storage.getItem('userToken');
             if (!token) {
@@ -105,9 +104,9 @@ export default function OrderHistoryScreen() {
                 return;
             }
 
-            const fileUri = downloadDir + `/Invoice-${orderId}.pdf`;
+            const fileUri = downloadDir + `/Invoice-${logicalId}.pdf`;
             const downloadRes = await RNFS.downloadFile({
-                fromUrl: `${API_BASE_URL}/orders/${orderId}/invoice`,
+                fromUrl: `${API_BASE_URL}/orders/${dbId}/invoice`,
                 toFile: fileUri,
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -296,7 +295,7 @@ export default function OrderHistoryScreen() {
                                     </View>
                                     <View style={[styles.statBox, styles.statBorder]}>
                                         <Text style={styles.statLabelText}>Items</Text>
-                                        <Text style={styles.statValueText}>{order.items.length}<Text style={styles.unitText}> SKU</Text></Text>
+                                        <Text style={styles.statValueText}>{order.items.length}<Text style={styles.unitText}> Designs</Text></Text>
                                     </View>
                                 </View>
 
@@ -305,13 +304,17 @@ export default function OrderHistoryScreen() {
                                         <Text style={styles.expandedTitle}>ITEM BREAKDOWN</Text>
                                         <View style={styles.expandedDivider} />
                                         {order.items.map((item, idx) => {
-                                            const imgUrl = item.product?.images?.[0] ? getImageUrl(item.product.images[0]) : 'https://images.unsplash.com/photo-1615486171448-4fd3ac54bc67';
+                                            const productImg = item.image || item.product?.images?.[0];
+                                            const imgUrl = productImg ? getImageUrl(productImg) : 'https://images.unsplash.com/photo-1615486171448-4fd3ac54bc67';
+                                            const productName = item.name || item.product?.name || 'Unknown Product';
+                                            const productDesign = item.designNumber || item.product?.designNumber || '';
                                             return (
                                                 <View key={idx} style={styles.expandedItemRow}>
                                                     <Image source={{ uri: imgUrl }} style={styles.expandedItemImage} />
                                                     <View style={styles.expandedItemDetails}>
-                                                        <Text style={styles.expandedItemName} numberOfLines={1}>{item.product?.name || 'Unknown Product'}</Text>
-                                                        <Text style={styles.expandedItemSku} numberOfLines={1}>{item.product?.sku || ''}</Text>
+                                                        <Text style={styles.expandedItemName} numberOfLines={1}>{productName}</Text>
+                                                        <Text style={styles.expandedItemText} numberOfLines={1}>DESIGN NO. {item.designNumber || productDesign || 'N/A'}</Text>
+                                                        <Text style={styles.expandedItemText} numberOfLines={1}>TAG NO. {item.tagNumber || item.product?.tagNumber || 'N/A'}</Text>
                                                         <View style={styles.expandedItemMetaRow}>
                                                             {item.material && <View style={styles.expandedBadge}><Text style={styles.expandedBadgeText}>{item.material}</Text></View>}
                                                             {item.purity && <View style={styles.expandedBadge}><Text style={styles.expandedBadgeText}>{item.purity}</Text></View>}
@@ -334,29 +337,27 @@ export default function OrderHistoryScreen() {
                                     </View>
                                 )}
 
-                                {(order.trackingId || ['SHIPMENT', 'SHIPPED', 'COMPLETED', 'DELIVERED'].includes(order.status)) && (
-                                    <View style={styles.cardActions}>
-                                        {order.trackingId && (
-                                            <View style={styles.trackingInfo}>
-                                                <Icon name="local-shipping" size={16} color={GOLD} />
-                                                <Text style={styles.trackingText}>{order.trackingId}</Text>
-                                            </View>
-                                        )}
-                                        <TouchableOpacity
-                                            style={styles.invoiceBtn}
-                                            onPress={() => handleDownloadInvoice(order.orderId)}
-                                        >
-                                            <LinearGradient
-                                                colors={[GOLD_DARK, GOLD]}
-                                                start={{ x: 0, y: 0 }}
-                                                end={{ x: 1, y: 1 }}
-                                                style={styles.invoiceGradient}
-                                            />
-                                            <Icon name="receipt-long" size={18} color={NAVY} />
-                                            <Text style={styles.invoiceBtnText}>INVOICE</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
+                                <View style={[styles.cardActions, !order.trackingId && { justifyContent: 'flex-end' }]}>
+                                    {order.trackingId && (
+                                        <View style={styles.trackingInfo}>
+                                            <Icon name="local-shipping" size={16} color={GOLD} />
+                                            <Text style={styles.trackingText}>{order.trackingId}</Text>
+                                        </View>
+                                    )}
+                                    <TouchableOpacity
+                                        style={styles.invoiceBtn}
+                                        onPress={() => handleDownloadInvoice(order._id, order.orderId)}
+                                    >
+                                        <LinearGradient
+                                            colors={[GOLD_DARK, GOLD]}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                            style={styles.invoiceGradient}
+                                        />
+                                        <Icon name="receipt-long" size={18} color={NAVY} />
+                                        <Text style={styles.invoiceBtnText}>INVOICE</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </TouchableOpacity>
                         );
                     })
@@ -377,7 +378,7 @@ export default function OrderHistoryScreen() {
                 )}
             </ScrollView>
 
-            <BottomNav activeTab="Orders" />
+            {/* <BottomNav activeTab="Orders" /> */}
         </View>
     );
 }
@@ -639,7 +640,7 @@ const styles = StyleSheet.create({
         color: TEXT_PRIMARY,
         marginBottom: 2,
     },
-    expandedItemSku: {
+    expandedItemText: {
         fontSize: 10,
         fontWeight: '600',
         color: TEXT_MUTED,

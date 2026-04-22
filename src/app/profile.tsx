@@ -296,6 +296,10 @@ export default function BusinessProfileScreen() {
                             <FieldItem label="WHATSAPP NUMBER" value={whatsappNumber} icon="chat" editing={editing} onChangeText={setWhatsappNumber} keyboardType="phone-pad" error={fieldErrors.whatsappNumber} />
                         </View>
                     </View>
+                    <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => navigation.navigate('orders' as any)}>
+                        <Icon name="history" size={20} color={NAVY} />
+                        <Text style={styles.actionBtnPrimaryText}>View Order History</Text>
+                    </TouchableOpacity>
 
                     {/* Business Details */}
                     <View style={styles.section}>
@@ -355,11 +359,6 @@ export default function BusinessProfileScreen() {
 
                     {/* Account Actions */}
                     <View style={[styles.section, { gap: 16 }]}>
-                        <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => navigation.navigate('orders' as any)}>
-                            <Icon name="history" size={20} color={NAVY} />
-                            <Text style={styles.actionBtnPrimaryText}>View Order History</Text>
-                        </TouchableOpacity>
-
                         <TouchableOpacity style={styles.actionBtn} onPress={handleLogout}>
                             <Icon name="logout" size={20} color="#fb7185" />
                             <Text style={styles.logoutText}>Logout from Dashboard</Text>
@@ -474,7 +473,7 @@ const styles = StyleSheet.create({
     profileRole: { fontSize: 10, fontWeight: '900', color: GOLD, letterSpacing: 2 },
     profileCompany: { fontSize: 15, fontWeight: '600', color: TEXT_MUTED },
 
-    section: { marginBottom: 32 },
+    section: { marginBottom: 16 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
     sectionTitle: { fontSize: 10, fontWeight: '900', color: GOLD, letterSpacing: 2 },
     detailsList: { gap: 12 },
@@ -497,7 +496,7 @@ const styles = StyleSheet.create({
     removeCardBtn: { flex: 1, height: 40, borderRadius: 12, backgroundColor: 'rgba(251,113,133,0.1)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(251,113,133,0.2)' },
     changeCardText: { fontSize: 11, fontWeight: '900', color: GOLD },
 
-    actionBtnPrimary: { height: 56, borderRadius: 16, backgroundColor: GOLD, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 12 },
+    actionBtnPrimary: { marginBottom: 16, height: 56, borderRadius: 16, backgroundColor: GOLD, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 12 },
     actionBtnPrimaryText: { fontSize: 14, fontWeight: '800', color: NAVY },
     actionBtn: { height: 56, borderRadius: 16, backgroundColor: 'rgba(251,113,133,0.05)', borderWidth: 1, borderColor: 'rgba(251,113,133,0.15)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 12 },
     logoutText: { fontSize: 14, fontWeight: '700', color: '#fb7185' },
