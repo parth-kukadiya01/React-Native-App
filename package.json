@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-community/blur": "^4.4.1",
     "@react-native-firebase/app": "^23.8.6",
     "@react-native-firebase/messaging": "^23.8.6",
     "@react-native/new-app-screen": "0.84.0",
@@ -30,7 +29,7 @@
     "react-native-reanimated": "^4.2.2",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "^4.23.0",
-    "react-native-screenshot-prevent": "^1.2.1",
+    "react-native-screenshot-prevent": "^1.2.2",
     "react-native-share": "^12.2.5",
     "react-native-splash-screen": "^3.3.0",
     "react-native-svg": "^15.15.3",

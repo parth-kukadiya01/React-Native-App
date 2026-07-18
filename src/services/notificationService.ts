@@ -24,8 +24,9 @@ export const notificationService = {
             const response = await api.delete('/notifications/push-token', { data: { token } });
             return response.data;
         } catch (error) {
-            console.error('Error removing push token:', error);
-            throw error;
+            // Best-effort cleanup: log but don't throw so logout always succeeds
+            // even when the token is already expired or the server rejects with 401
+            console.warn('Could not remove push token (non-fatal):', (error as any)?.response?.status ?? error);
         }
     },
 };

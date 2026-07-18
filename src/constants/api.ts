@@ -2,22 +2,28 @@
 import { Platform } from 'react-native';
 
 // Base URL for the backend server
-// export const BASE_URL = 'http://192.168.1.4:5001/api/v1/';
+// Local development (LAN):
+// export const BASE_URL = 'http://192.168.1.4:5001/api/v1';
+// export const BASE_URL = 'http://192.168.1.69:5001/api/v1';
+
+// Production server
 export const BASE_URL = 'https://sv.riolls.com/api/v1';
 
 // Base API URL - configures based on platform
-// Using LAN IP for all physical devices (iOS & Android) to ensure connectivity
 export const API_BASE_URL = `${BASE_URL}`;
 
 // Health check endpoint
-export const API_HEALTH_URL = `${BASE_URL}/health`;
+export const API_HEALTH_URL = 'https://sv.riolls.com/health';
 
 // Helper to construct full image URL
 export const getImageUrl = (path: string | undefined | null) => {
     if (!path) return 'https://via.placeholder.com/400';
     if (path.startsWith('http')) {
-        // If it's a localhost URL on a physical device, replace with LAN IP
-        return path.replace('http://localhost:5001', BASE_URL).replace('http://127.0.0.1:5001', BASE_URL);
+        // Replace any local/LAN references with production domain
+        return path
+            .replace('http://localhost:5001', 'https://sv.riolls.com')
+            .replace('http://127.0.0.1:5001', 'https://sv.riolls.com')
+            .replace(/http:\/\/192\.168\.\d+\.\d+:5001/, 'https://sv.riolls.com');
     }
     return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 };

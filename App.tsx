@@ -4,7 +4,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Provider } from 'react-redux';
-import RNScreenshotPrevent from 'react-native-screenshot-prevent';
 // import SplashScreen from 'react-native-splash-screen';
 // import { ErrorBoundary } from 'react-error-boundary';
 
@@ -16,6 +15,42 @@ import AppNavigator, { navigationRef } from './src/navigation/AppNavigator';
 import SplashScreen from './src/app/SplashScreen';
 import MainNavigation from './src/navigation/MainNavigator';
 import { store } from './src/store';
+
+// Screenshot prevention - wrapped safely due to RN 0.84 New Architecture incompatibility
+const safeScreenshotPrevent = {
+    enable: () => {
+        try {
+            const { enabled } = require('react-native-screenshot-prevent');
+            if (typeof enabled === 'function') enabled(true);
+        } catch (e) {
+            console.warn('RNScreenshotPrevent: enable failed', e);
+        }
+    },
+    disable: () => {
+        try {
+            const { enabled } = require('react-native-screenshot-prevent');
+            if (typeof enabled === 'function') enabled(false);
+        } catch (e) {
+            console.warn('RNScreenshotPrevent: disable failed', e);
+        }
+    },
+    enableSecureView: () => {
+        try {
+            const { enableSecureView } = require('react-native-screenshot-prevent');
+            if (typeof enableSecureView === 'function') enableSecureView();
+        } catch (e) {
+            console.warn('RNScreenshotPrevent: enableSecureView failed', e);
+        }
+    },
+    disableSecureView: () => {
+        try {
+            const { disableSecureView } = require('react-native-screenshot-prevent');
+            if (typeof disableSecureView === 'function') disableSecureView();
+        } catch (e) {
+            console.warn('RNScreenshotPrevent: disableSecureView failed', e);
+        }
+    },
+};
 
 function ErrorFallback({ resetErrorBoundary }: any) {
     const handleReset = async () => {
@@ -47,18 +82,18 @@ function AppContent() {
 
     useEffect(() => {
         if (Platform.OS === 'android') {
-            RNScreenshotPrevent.enabled(true);
+            safeScreenshotPrevent.enable();
         }
         if (Platform.OS === 'ios') {
-            if (!__DEV__) RNScreenshotPrevent.enableSecureView();
+            if (!__DEV__) safeScreenshotPrevent.enableSecureView();
         }
 
         return () => {
             if (Platform.OS === 'android') {
-                RNScreenshotPrevent.enabled(false);
+                safeScreenshotPrevent.disable();
             }
             if (Platform.OS === 'ios') {
-                if (!__DEV__) RNScreenshotPrevent.disableSecureView();
+                if (!__DEV__) safeScreenshotPrevent.disableSecureView();
             }
         };
     }, []);

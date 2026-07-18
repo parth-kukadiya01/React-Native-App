@@ -85,6 +85,19 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        // NDK 27+ removed the gold linker; force lld to fix '-fuse-ld=gold' CMake errors.
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_LD=lld"
+            }
+        }
+    }
+    // Force CMake 4.1.1 (installed) instead of 3.22.1 which has a broken
+    // LTO/IPO check that uses -fuse-ld=gold — removed in NDK 27.
+    externalNativeBuild {
+        cmake {
+            version "4.1.1"
+        }
     }
     splits {
         abi {

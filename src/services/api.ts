@@ -86,13 +86,20 @@ api.interceptors.response.use(
                 status: error.response.status,
                 data: error.response.data,
             });
+
+            // Handle 401 Unauthorized — clear session and redirect to login
+            // Skip for push-token removal (called during logout when token may already be invalid)
+            const url = error.config?.url ?? '';
+            const isLogoutRelated = url.includes('/notifications/push-token') || url.includes('/auth/logout');
+            if (error.response.status === 401 && !isLogoutRelated) {
+                await handleAuthError();
+            }
         } else if (error.request) {
             console.error("⚠️ No Response Received:", error.request);
         } else {
             console.error("❌ Request Setup Error:", error.message);
         }
         return Promise.reject(error);
-
     }
 );
 
