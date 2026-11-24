@@ -13,6 +13,7 @@ import {
     Platform,
     Modal as RNModal,
 } from 'react-native';
+import KeyboardAwareScreen from '../components/KeyboardAwareScreen';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { StatusBar } from 'react-native';
 import Icon from '../components/Icon';
@@ -213,7 +214,7 @@ export default function BusinessProfileScreen() {
     if (loading) {
         return (
             <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <LinearGradient colors={[NAVY, NAVY_MID, '#09101d']} style={styles.background} />
+                <LinearGradient colors={[NAVY, NAVY, NAVY, NAVY]} style={styles.background} />
                 <ActivityIndicator size="large" color={GOLD} />
                 <Text style={{ marginTop: 12, color: TEXT_MUTED, fontSize: 13, fontWeight: '600' }}>Loading profile...</Text>
             </View>
@@ -223,8 +224,8 @@ export default function BusinessProfileScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
-            <LinearGradient colors={[NAVY, NAVY_MID, '#09101d']} style={styles.background} />
+            <StatusBar barStyle="dark-content" backgroundColor={NAVY} />
+            <LinearGradient colors={[NAVY, NAVY, NAVY, NAVY]} style={styles.background} />
 
             <MessageModal
                 visible={modalConfig.visible}
@@ -259,166 +260,172 @@ export default function BusinessProfileScreen() {
                 }
             />
 
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={100}
+            <KeyboardAwareScreen
+                contentContainerStyle={styles.scrollContent}
+                dismissOnTap={false}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                    {/* Profile Card */}
-                    <View style={styles.profileCard}>
-                        <View style={styles.avatarContainer}>
-                            <View style={styles.avatarBorder}>
-                                <Image
-                                    source={{ uri: user?.avatar ? getImageUrl(user.avatar) : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }}
-                                    style={styles.avatar}
-                                />
-                            </View>
-                            <View style={styles.verifiedBadge}><Icon name="verified" size={14} color={NAVY} /></View>
+                {/* Profile Card */}
+                <View style={styles.profileCard}>
+                    <View style={styles.avatarContainer}>
+                        <View style={styles.avatarBorder}>
+                            <Image
+                                source={{ uri: user?.avatar ? getImageUrl(user.avatar) : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y' }}
+                                style={styles.avatar}
+                            />
                         </View>
-                        <View style={styles.profileInfo}>
-                            <Text style={styles.profileName}>{user?.fullName || 'Partner Name'}</Text>
-                            <Text style={styles.profileRole}>WHOLESALE PARTNER</Text>
-                            <Text style={styles.profileCompany}>{user?.companyName || 'Valued Business'}</Text>
-                        </View>
+                        <View style={styles.verifiedBadge}><Icon name="verified" size={14} color={NAVY} /></View>
                     </View>
-
-
-                    {/* Personal Info */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}><Icon name="person" size={20} color={GOLD} /><Text style={styles.sectionTitle}>PERSONAL INFO</Text></View>
-                        <View style={styles.detailsList}>
-                            <FieldItem label="FULL NAME" value={fullName} icon="badge" editing={editing} onChangeText={setFullName} error={fieldErrors.fullName} />
-                            <FieldItem label="COMPANY NAME" value={companyName} icon="business" editing={editing} onChangeText={setCompanyName} error={fieldErrors.companyName} />
-                            <FieldItem label="EMAIL" value={user?.email || ''} icon="mail-outline" editing={false} readOnly />
-                            <FieldItem label="CONTACT NUMBER" value={phone} icon="call" editing={editing} onChangeText={setPhone} keyboardType="phone-pad" error={fieldErrors.phone} />
-                            <FieldItem label="WHATSAPP NUMBER" value={whatsappNumber} icon="chat" editing={editing} onChangeText={setWhatsappNumber} keyboardType="phone-pad" error={fieldErrors.whatsappNumber} />
-                        </View>
+                    <View style={styles.profileInfo}>
+                        <Text style={styles.profileName}>{user?.fullName || 'Partner Name'}</Text>
+                        <Text style={styles.profileRole}>WHOLESALE PARTNER</Text>
+                        <Text style={styles.profileCompany}>{user?.companyName || 'Valued Business'}</Text>
                     </View>
-                    <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => navigation.navigate('orders' as any)}>
+                </View>
+
+
+                {/* Personal Info */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}><Icon name="person" size={20} color={GOLD} /><Text style={styles.sectionTitle}>PERSONAL INFO</Text></View>
+                    <View style={styles.detailsList}>
+                        <FieldItem label="FULL NAME" value={fullName} icon="badge" editing={editing} onChangeText={setFullName} error={fieldErrors.fullName} />
+                        <FieldItem label="COMPANY NAME" value={companyName} icon="business" editing={editing} onChangeText={setCompanyName} error={fieldErrors.companyName} />
+                        <FieldItem label="EMAIL" value={user?.email || ''} icon="mail-outline" editing={false} readOnly />
+                        <FieldItem label="CONTACT NUMBER" value={phone} icon="call" editing={editing} onChangeText={setPhone} keyboardType="phone-pad" error={fieldErrors.phone} />
+                        <FieldItem label="WHATSAPP NUMBER" value={whatsappNumber} icon="chat" editing={editing} onChangeText={setWhatsappNumber} keyboardType="phone-pad" error={fieldErrors.whatsappNumber} />
+                    </View>
+                </View>
+                <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => navigation.navigate('orders' as any)}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                         <Icon name="history" size={20} color={NAVY} />
                         <Text style={styles.actionBtnPrimaryText}>View Order History</Text>
-                    </TouchableOpacity>
-
-                    {/* Business Details */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}><Icon name="apartment" size={20} color={GOLD} /><Text style={styles.sectionTitle}>BUSINESS DETAILS</Text></View>
-                        <View style={styles.detailsList}>
-                            <FieldItem label="ADDRESS" value={address} icon="location-on" editing={editing} onChangeText={setAddress} multiline error={fieldErrors.address} />
-                            <FieldItem label="PAN NUMBER" value={panNumber} icon="credit-card" editing={editing} onChangeText={setPanNumber} autoCapitalize="characters" error={fieldErrors.panNumber} />
-                            <FieldItem label="GST NUMBER" value={gstNumber} icon="receipt-long" editing={editing} onChangeText={setGstNumber} autoCapitalize="characters" error={fieldErrors.gstNumber} />
-                        </View>
                     </View>
+                    <Icon name="chevron-right" size={24} color={NAVY} />
+                </TouchableOpacity>
 
-                    {/* Visiting Card */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}><Icon name="contact-mail" size={20} color={GOLD} /><Text style={styles.sectionTitle}>VISITING CARD</Text></View>
-                        {visitingCard ? (
-                            <View style={styles.cardPreview}>
-                                <Image source={{ uri: getImageUrl(visitingCard) }} style={styles.visitingCardImage} resizeMode="cover" />
-                                {editing && (
-                                    <View style={styles.cardActions}>
-                                        <TouchableOpacity style={styles.changeCardBtn} onPress={handlePickVisitingCard} disabled={uploadingCard}>
-                                            <Icon name="swap-horiz" size={16} color={GOLD} /><Text style={styles.changeCardText}>CHANGE</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={styles.removeCardBtn} onPress={() => setVisitingCard(null)}>
-                                            <Icon name="close" size={16} color="#fb7185" /><Text style={[styles.changeCardText, { color: '#fb7185' }]}>REMOVE</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </View>
-                        ) : (
-                            <TouchableOpacity style={styles.uploadCard} onPress={editing ? handlePickVisitingCard : undefined} disabled={!editing || uploadingCard}>
-                                {uploadingCard ? <ActivityIndicator size="large" color={GOLD} /> : (
-                                    <>
-                                        <Icon name="add-a-photo" size={40} color={editing ? GOLD : NAVY_BORDER} />
-                                        <Text style={[styles.uploadCardText, !editing && { color: TEXT_MUTED }]}>{editing ? 'TAP TO UPLOAD VISITING CARD' : 'NO VISITING CARD'}</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
-                        )}
+                {/* Business Details */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}><Icon name="apartment" size={20} color={GOLD} /><Text style={styles.sectionTitle}>BUSINESS DETAILS</Text></View>
+                    <View style={styles.detailsList}>
+                        <FieldItem label="ADDRESS" value={address} icon="location-on" editing={editing} onChangeText={setAddress} multiline error={fieldErrors.address} />
+                        <FieldItem label="PAN NUMBER" value={panNumber} icon="credit-card" editing={editing} onChangeText={setPanNumber} autoCapitalize="characters" error={fieldErrors.panNumber} />
+                        <FieldItem label="GST NUMBER" value={gstNumber} icon="receipt-long" editing={editing} onChangeText={setGstNumber} autoCapitalize="characters" error={fieldErrors.gstNumber} />
                     </View>
+                </View>
 
-                    {/* T-PIN Security */}
-                    <View style={styles.section}>
-                        <View style={styles.sectionHeader}><Icon name="lock" size={20} color={GOLD} /><Text style={styles.sectionTitle}>T-PIN SECURITY</Text></View>
-                        <View style={styles.detailItem}>
-                            <View style={styles.detailTextContainer}>
-                                <Text style={styles.detailLabel}>STATUS</Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: hasTpin ? SUCCESS_COLOR : ERROR_COLOR }} />
-                                    <Text style={styles.detailValue}>{hasTpin ? 'Active' : 'Not Set'}</Text>
+                {/* Visiting Card */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}><Icon name="contact-mail" size={20} color={GOLD} /><Text style={styles.sectionTitle}>VISITING CARD</Text></View>
+                    {visitingCard ? (
+                        <View style={styles.cardPreview}>
+                            <Image source={{ uri: getImageUrl(visitingCard) }} style={styles.visitingCardImage} resizeMode="cover" />
+                            {editing && (
+                                <View style={styles.cardActions}>
+                                    <TouchableOpacity style={styles.changeCardBtn} onPress={handlePickVisitingCard} disabled={uploadingCard}>
+                                        <Icon name="swap-horiz" size={16} color={GOLD} /><Text style={styles.changeCardText}>CHANGE</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.removeCardBtn} onPress={() => setVisitingCard(null)}>
+                                        <Icon name="close" size={16} color="#BA1A1A" /><Text style={[styles.changeCardText, { color: '#fb7185' }]}>REMOVE</Text>
+                                    </TouchableOpacity>
                                 </View>
-                            </View>
-                            <TouchableOpacity style={styles.detailIconContainer} onPress={() => openTpinModal(hasTpin ? 'change' : 'generate')}>
-                                <Icon name={hasTpin ? 'edit' : 'add'} size={20} color={GOLD} />
-                            </TouchableOpacity>
+                            )}
                         </View>
-                    </View>
+                    ) : (
+                        <TouchableOpacity style={styles.uploadCard} onPress={editing ? handlePickVisitingCard : undefined} disabled={!editing || uploadingCard}>
+                            {uploadingCard ? <ActivityIndicator size="large" color={GOLD} /> : (
+                                <>
+                                    <Icon name="add-a-photo" size={40} color={editing ? GOLD : NAVY_BORDER} />
+                                    <Text style={[styles.uploadCardText, !editing && { color: TEXT_MUTED }]}>{editing ? 'TAP TO UPLOAD VISITING CARD' : 'NO VISITING CARD'}</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    )}
+                </View>
 
-                    {/* Account Actions */}
-                    <View style={[styles.section, { gap: 16 }]}>
-                        <TouchableOpacity style={styles.actionBtn} onPress={handleLogout}>
-                            <Icon name="logout" size={20} color="#fb7185" />
-                            <Text style={styles.logoutText}>Logout from Dashboard</Text>
+                {/* T-PIN Security */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}><Icon name="lock" size={20} color={GOLD} /><Text style={styles.sectionTitle}>T-PIN SECURITY</Text></View>
+                    <View style={styles.detailItem}>
+                        <View style={styles.detailTextContainer}>
+                            <Text style={styles.detailLabel}>STATUS</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: hasTpin ? SUCCESS_COLOR : ERROR_COLOR }} />
+                                <Text style={styles.detailValue}>{hasTpin ? 'Active' : 'Not Set'}</Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity style={styles.detailIconContainer} onPress={() => openTpinModal(hasTpin ? 'change' : 'generate')}>
+                            <Icon name={hasTpin ? 'edit' : 'add'} size={20} color={GOLD} />
                         </TouchableOpacity>
                     </View>
+                </View>
 
-                    <View style={styles.footerInfo}>
-                        <Text style={styles.memberSince}>MEMBER SINCE {new Date(user?.createdAt).getFullYear() || '2024'}</Text>
-                        <Text style={styles.versionText}>SV GOLD B2B · v1.2.0</Text>
-                    </View>
+                {/* Account Actions */}
+                <View style={[styles.section, { gap: 16 }]}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={handleLogout}>
+                        <Icon name="logout" size={20} color="#BA1A1A" />
+                        <Text style={styles.logoutText}>Logout from Dashboard</Text>
+                    </TouchableOpacity>
+                </View>
 
-                </ScrollView>
-            </KeyboardAvoidingView>
+                <View style={styles.footerInfo}>
+                    <Text style={styles.memberSince}>MEMBER SINCE {new Date(user?.createdAt).getFullYear() || '2024'}</Text>
+                    <Text style={styles.versionText}>SV GOLD B2B · v1.2.0</Text>
+                </View>
+
+            </KeyboardAwareScreen>
 
             <BottomNav activeTab="Account" />
 
             {/* T-PIN MODAL */}
             <RNModal visible={showTpinProfileModal} transparent animationType="fade">
-                <View style={tStyles.overlay}>
-                    <View style={tStyles.card}>
-                        <TouchableOpacity style={tStyles.closeBtn} onPress={() => setShowTpinProfileModal(false)}><Icon name="close" size={24} color={TEXT_MUTED} /></TouchableOpacity>
-                        <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={tStyles.iconRing}><Icon name="vpn-key" size={28} color={NAVY} /></LinearGradient>
-                        <Text style={tStyles.title}>{tpinProfileMode === 'confirm' ? 'Confirm T-PIN' : tpinProfileMode === 'change' ? 'Update T-PIN' : 'Create T-PIN'}</Text>
-                        <Text style={tStyles.subtitle}>{tpinProfileMode === 'confirm' ? 'Please re-enter to confirm' : 'Set a 4-digit PIN for order security'}</Text>
+                {/* KeyboardAvoidingView inside Modal ensures PIN input stays above keyboard on iOS */}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <View style={tStyles.overlay}>
+                        <View style={tStyles.card}>
+                            <TouchableOpacity style={tStyles.closeBtn} onPress={() => setShowTpinProfileModal(false)}><Icon name="close" size={24} color={TEXT_MUTED} /></TouchableOpacity>
+                            <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={tStyles.iconRing}><Icon name="vpn-key" size={28} color={NAVY} /></LinearGradient>
+                            <Text style={tStyles.title}>{tpinProfileMode === 'confirm' ? 'Confirm T-PIN' : tpinProfileMode === 'change' ? 'Update T-PIN' : 'Create T-PIN'}</Text>
+                            <Text style={tStyles.subtitle}>{tpinProfileMode === 'confirm' ? 'Please re-enter to confirm' : 'Set a 4-digit PIN for order security'}</Text>
 
-                        {tpinProfileMode === 'change' && (
+                            {tpinProfileMode === 'change' && (
+                                <TextInput
+                                    style={tStyles.pinInput}
+                                    value={tpinCurrentInput}
+                                    onChangeText={(t) => { setTpinCurrentInput(t.replace(/[^0-9]/g, '').slice(0, 4)); setTpinError(''); }}
+                                    placeholder="Current PIN"
+                                    placeholderTextColor={TEXT_MUTED}
+                                    keyboardType="number-pad" maxLength={4} secureTextEntry textAlign="center"
+                                />
+                            )}
                             <TextInput
                                 style={tStyles.pinInput}
-                                value={tpinCurrentInput}
-                                onChangeText={(t) => { setTpinCurrentInput(t.replace(/[^0-9]/g, '').slice(0, 4)); setTpinError(''); }}
-                                placeholder="Current PIN"
+                                value={tpinProfileMode === 'confirm' ? tpinConfirm : tpinInput}
+                                onChangeText={(t) => {
+                                    if (tpinProfileMode === 'confirm') {
+                                        setTpinConfirm(t.replace(/[^0-9]/g, '').slice(0, 4));
+                                    } else {
+                                        setTpinInput(t.replace(/[^0-9]/g, '').slice(0, 4));
+                                    }
+                                    setTpinError('');
+                                }}
+                                placeholder={tpinProfileMode === 'confirm' ? "Confirm PIN" : "Enter 4-digit PIN"}
                                 placeholderTextColor={TEXT_MUTED}
-                                keyboardType="number-pad" maxLength={4} secureTextEntry textAlign="center"
+                                keyboardType="number-pad" maxLength={4} secureTextEntry textAlign="center" autoFocus
                             />
-                        )}
-                        <TextInput
-                            style={tStyles.pinInput}
-                            value={tpinProfileMode === 'confirm' ? tpinConfirm : tpinInput}
-                            onChangeText={(t) => {
-                                if (tpinProfileMode === 'confirm') {
-                                    setTpinConfirm(t.replace(/[^0-9]/g, '').slice(0, 4));
-                                } else {
-                                    setTpinInput(t.replace(/[^0-9]/g, '').slice(0, 4));
-                                }
-                                setTpinError('');
-                            }}
-                            placeholder={tpinProfileMode === 'confirm' ? "Confirm PIN" : "Enter 4-digit PIN"}
-                            placeholderTextColor={TEXT_MUTED}
-                            keyboardType="number-pad" maxLength={4} secureTextEntry textAlign="center" autoFocus
-                        />
 
-                        {tpinError ? <Text style={tStyles.error}>{tpinError}</Text> : null}
+                            {tpinError ? <Text style={tStyles.error}>{tpinError}</Text> : null}
 
-                        <TouchableOpacity style={tStyles.submitBtn} onPress={handleTpinProfileAction} disabled={tpinLoading}>
-                            <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={tStyles.btnGradient}>
-                                {tpinLoading ? <ActivityIndicator color={NAVY} /> : <Text style={tStyles.btnText}>{tpinProfileMode === 'generate' ? 'Next' : 'Secure Account'}</Text>}
-                            </LinearGradient>
-                        </TouchableOpacity>
+                            <TouchableOpacity style={tStyles.submitBtn} onPress={handleTpinProfileAction} disabled={tpinLoading}>
+                                <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={tStyles.btnGradient}>
+                                    {tpinLoading ? <ActivityIndicator color={NAVY} /> : <Text style={tStyles.btnText}>{tpinProfileMode === 'generate' ? 'Next' : 'Secure Account'}</Text>}
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </RNModal>
         </View>
     );
@@ -437,7 +444,7 @@ function FieldItem({ label, value, icon, editing, onChangeText, readOnly, keyboa
                         <Text style={styles.detailValue}>{value || 'Not Provided'}</Text>
                     )}
                 </View>
-                <View style={styles.detailIconContainer}><Icon name={icon} size={20} color={GOLD} /></View>
+                <View style={styles.detailIconContainer}><Icon name={icon} size={18} color={GOLD} /></View>
             </View>
             {error ? (
                 <View style={styles.inlineError}>
@@ -450,12 +457,12 @@ function FieldItem({ label, value, icon, editing, onChangeText, readOnly, keyboa
 }
 
 const SUCCESS_COLOR = '#34D399';
-const ERROR_COLOR = '#F87171';
+const ERROR_COLOR = '#BA1A1A';
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: NAVY },
     background: { ...StyleSheet.absoluteFillObject },
-    scrollContent: { paddingHorizontal: 20, paddingBottom: 140, paddingTop: 16 },
+    scrollContent: { paddingHorizontal: 20, paddingBottom: 120, paddingTop: 16 },
     editButton: { height: 44, paddingHorizontal: 16, justifyContent: 'center' },
     editButtonText: { fontSize: 11, fontWeight: '900', color: GOLD, letterSpacing: 1 },
     saveButton: { height: 36, paddingHorizontal: 16, backgroundColor: GOLD, borderRadius: 12, justifyContent: 'center' },
@@ -463,43 +470,43 @@ const styles = StyleSheet.create({
     cancelButton: { height: 36, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: NAVY_BORDER, justifyContent: 'center' },
     cancelButtonText: { fontSize: 10, fontWeight: '800', color: TEXT_MUTED },
 
-    profileCard: { backgroundColor: NAVY_CARD, borderRadius: 32, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER, marginBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.3, shadowRadius: 32, elevation: 10 },
-    avatarContainer: { position: 'relative', marginBottom: 20 },
+    profileCard: { backgroundColor: NAVY_CARD, borderRadius: 24, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER, marginBottom: 24, shadowColor: '#1C1B1B', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.3, shadowRadius: 32, elevation: 10 },
+    avatarContainer: { position: 'relative', marginBottom: 16 },
     avatarBorder: { padding: 4, borderRadius: 64, borderWidth: 2, borderColor: GOLD },
-    avatar: { width: 110, height: 110, borderRadius: 55, backgroundColor: NAVY_INPUT },
+    avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: NAVY_INPUT },
     verifiedBadge: { position: 'absolute', bottom: 4, right: 4, backgroundColor: GOLD, padding: 6, borderRadius: 16, borderWidth: 3, borderColor: NAVY_CARD },
     profileInfo: { alignItems: 'center', gap: 6 },
-    profileName: { fontSize: 24, fontWeight: '800', color: TEXT_PRIMARY },
+    profileName: { fontSize: 22, fontWeight: '800', color: TEXT_PRIMARY },
     profileRole: { fontSize: 10, fontWeight: '900', color: GOLD, letterSpacing: 2 },
-    profileCompany: { fontSize: 15, fontWeight: '600', color: TEXT_MUTED },
+    profileCompany: { fontSize: 14, fontWeight: '600', color: TEXT_MUTED },
 
     section: { marginBottom: 16 },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
     sectionTitle: { fontSize: 10, fontWeight: '900', color: GOLD, letterSpacing: 2 },
-    detailsList: { gap: 12 },
+    detailsList: { gap: 10 },
     detailItemContainer: { gap: 6 },
-    detailItem: { flexDirection: 'row', alignItems: 'center', padding: 20, borderRadius: 24, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER },
+    detailItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12, borderRadius: 16, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER },
     detailTextContainer: { flex: 1 },
     detailLabel: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1.5, marginBottom: 4 },
     inlineError: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 12 },
     inlineErrorText: { color: ERROR_COLOR, fontSize: 11, fontWeight: '600' },
-    detailValue: { fontSize: 14, fontWeight: '700', color: TEXT_PRIMARY },
-    detailInput: { fontSize: 14, fontWeight: '700', color: TEXT_PRIMARY, padding: 0 },
-    detailIconContainer: { width: 44, height: 44, borderRadius: 22, backgroundColor: NAVY_INPUT, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER },
+    detailValue: { fontSize: 13, fontWeight: '700', color: TEXT_PRIMARY },
+    detailInput: { fontSize: 13, fontWeight: '700', color: TEXT_PRIMARY, padding: 0 },
+    detailIconContainer: { width: 36, height: 36, borderRadius: 18, backgroundColor: NAVY_INPUT, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER },
 
-    uploadCard: { height: 160, borderRadius: 24, backgroundColor: NAVY_CARD, borderWidth: 2, borderColor: NAVY_BORDER, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', gap: 12 },
+    uploadCard: { height: 120, borderRadius: 16, backgroundColor: NAVY_CARD, borderWidth: 2, borderColor: NAVY_BORDER, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', gap: 10 },
     uploadCardText: { fontSize: 10, fontWeight: '900', color: GOLD },
-    cardPreview: { borderRadius: 24, backgroundColor: NAVY_CARD, overflow: 'hidden', borderWidth: 1, borderColor: NAVY_BORDER },
-    visitingCardImage: { width: '100%', height: 200 },
-    cardActions: { flexDirection: 'row', padding: 12, gap: 12, backgroundColor: 'rgba(0,0,0,0.3)' },
-    changeCardBtn: { flex: 1, height: 40, borderRadius: 12, backgroundColor: NAVY_INPUT, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-    removeCardBtn: { flex: 1, height: 40, borderRadius: 12, backgroundColor: 'rgba(251,113,133,0.1)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(251,113,133,0.2)' },
+    cardPreview: { borderRadius: 16, backgroundColor: NAVY_CARD, overflow: 'hidden', borderWidth: 1, borderColor: NAVY_BORDER },
+    visitingCardImage: { width: '100%', height: 160 },
+    cardActions: { flexDirection: 'row', padding: 10, gap: 10, backgroundColor: 'rgba(0,0,0,0.3)' },
+    changeCardBtn: { flex: 1, height: 36, borderRadius: 10, backgroundColor: NAVY_INPUT, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    removeCardBtn: { flex: 1, height: 36, borderRadius: 10, backgroundColor: 'rgba(251,113,133,0.1)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(251,113,133,0.2)' },
     changeCardText: { fontSize: 11, fontWeight: '900', color: GOLD },
 
-    actionBtnPrimary: { marginBottom: 16, height: 56, borderRadius: 16, backgroundColor: GOLD, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 12 },
-    actionBtnPrimaryText: { fontSize: 14, fontWeight: '800', color: NAVY },
-    actionBtn: { height: 56, borderRadius: 16, backgroundColor: 'rgba(251,113,133,0.05)', borderWidth: 1, borderColor: 'rgba(251,113,133,0.15)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 12 },
-    logoutText: { fontSize: 14, fontWeight: '700', color: '#fb7185' },
+    actionBtnPrimary: { marginBottom: 16, height: 48, borderRadius: 12, backgroundColor: GOLD, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 12 },
+    actionBtnPrimaryText: { fontSize: 13, fontWeight: '800', color: NAVY },
+    actionBtn: { height: 48, borderRadius: 12, backgroundColor: 'rgba(251,113,133,0.05)', borderWidth: 1, borderColor: 'rgba(251,113,133,0.15)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 12 },
+    logoutText: { fontSize: 13, fontWeight: '700', color: '#BA1A1A' },
     footerInfo: { alignItems: 'center', gap: 8 },
     memberSince: { fontSize: 10, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 2 },
     versionText: { fontSize: 9, fontWeight: '600', color: TEXT_MUTED, opacity: 0.5 },

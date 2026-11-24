@@ -42,34 +42,70 @@ export default function CatalogScreen() {
     const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchMode, setIsSearchMode] = useState(false);
+    const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { cartCount, updateCartCount } = useCart();
 
     const [showRefine, setShowRefine] = useState(false);
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState('desc');
+    // Weight filter — stored as strings so TextInput works naturally
+    const [minWeight, setMinWeight] = useState('');
+    const [maxWeight, setMaxWeight] = useState('');
 
     const routeParamsRef = useRef(route.params);
     routeParamsRef.current = route.params;
 
     const sortRef = useRef({ sortBy, sortOrder });
     sortRef.current = { sortBy, sortOrder };
+    const weightRef = useRef({ minWeight, maxWeight });
+    weightRef.current = { minWeight, maxWeight };
+    const isFetchingRef = useRef(false);
 
-    const fetchProducts = useCallback(async (filterId: string | null) => {
+    const fetchProducts = useCallback(async (filterId: string | null, page: number = 1) => {
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
         try {
-            setLoading(true);
-            const params: any = { sortBy: sortRef.current.sortBy, sortOrder: sortRef.current.sortOrder };
-            if (filterId) {
-                params.category = filterId;
-            }
+            if (page === 1) setLoading(true);
+            else setLoadingMore(true);
+
+            const params: any = {
+                sortBy: sortRef.current.sortBy,
+                sortOrder: sortRef.current.sortOrder,
+                page,
+                limit: 20,
+            };
+            if (filterId) params.category = filterId;
+
+            // Weight range — only send if user has entered a value
+            const minVal = parseFloat(weightRef.current.minWeight);
+            const maxVal = parseFloat(weightRef.current.maxWeight);
+            if (!isNaN(minVal) && minVal > 0) params.minNetWt = minVal;
+            if (!isNaN(maxVal) && maxVal > 0) params.maxNetWt = maxVal;
+
             const res = await productService.getProducts(params);
-            const products = res.data.data.products || [];
-            setFilteredProducts(products);
+            const resData = res.data.data;
+            const products = resData.products || [];
+            const pages = resData.totalPages ?? resData.pagination?.totalPages ?? 1;
+
+            setTotalPages(pages);
+            setCurrentPage(page);
+            if (page === 1) {
+                setFilteredProducts(products);
+            } else {
+                setFilteredProducts(prev => [...prev, ...products]);
+            }
         } catch (error) {
             console.error('Error fetching products:', error);
-            setFilteredProducts([]);
+            if (page === 1) setFilteredProducts([]);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
+            isFetchingRef.current = false;
         }
     }, []);
     useFocusEffect(
@@ -82,7 +118,7 @@ export default function CatalogScreen() {
             setActiveFilterId(catId);
             setActiveFilter(catName);
             console.log("catId", catId);
-            fetchProducts(catId);
+            fetchProducts(catId, 1);
         }, [categoryId, sortBy, sortOrder])
     );
 
@@ -107,7 +143,46 @@ export default function CatalogScreen() {
         if (activeFilter !== filterName) {
             setActiveFilter(filterName);
             setActiveFilterId(filterId);
-            fetchProducts(filterId);
+            fetchProducts(filterId, 1);
+        }
+    };
+
+    const handleLoadMore = () => {
+        if (!loadingMore && !loading && currentPage < totalPages) {
+            if (isSearchMode && searchQuery.trim()) {
+                handleSearchPage(currentPage + 1);
+            } else {
+                fetchProducts(activeFilterId, currentPage + 1);
+            }
+        }
+    };
+
+    const handleSearchPage = async (page: number = 1) => {
+        if (!searchQuery.trim()) return;
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
+        try {
+            if (page === 1) setLoading(true);
+            else setLoadingMore(true);
+            setCurrentPage(page);
+            const res = await productService.getProducts({ search: searchQuery.trim(), limit: 20, page });
+            const resData = res.data.data;
+            const products = resData.products || [];
+            const pages = resData.totalPages ?? resData.pagination?.totalPages ?? 1;
+            setTotalPages(pages);
+            setCurrentPage(page);
+            if (page === 1) {
+                setFilteredProducts(products);
+            } else {
+                setFilteredProducts(prev => [...prev, ...products]);
+            }
+        } catch (error: any) {
+            console.error('Error searching products:', error);
+            if (page === 1) setFilteredProducts([]);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+            isFetchingRef.current = false;
         }
     };
 
@@ -142,20 +217,42 @@ export default function CatalogScreen() {
 
     const handleApplyRefine = () => {
         setShowRefine(false);
+        // weightRef is already synced via state; re-fetch with current filterId
+        fetchProducts(activeFilterId, 1);
     };
 
-    const handleSearch = async () => {
+    const handleResetFilters = () => {
+        setSortBy('createdAt');
+        setSortOrder('desc');
+        setMinWeight('');
+        setMaxWeight('');
+    };
+
+    const handleSearch = () => {
         if (!searchQuery.trim()) return;
-        try {
-            setLoading(true);
-            const res = await productService.getProducts({ search: searchQuery });
-            const products = res.data.data.products || [];
-            setFilteredProducts(products);
-        } catch (error: any) {
-            console.error('Error searching products:', error);
-        } finally {
-            setLoading(false);
+        setIsSearchMode(true);
+        handleSearchPage(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearchQuery('');
+        setIsSearchMode(false);
+        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+        fetchProducts(activeFilterId, 1);
+    };
+
+    const handleSearchTextChange = (text: string) => {
+        setSearchQuery(text);
+        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+        if (!text.trim()) {
+            setIsSearchMode(false);
+            fetchProducts(activeFilterId, 1);
+            return;
         }
+        searchDebounceRef.current = setTimeout(() => {
+            setIsSearchMode(true);
+            handleSearchPage(1);
+        }, 500);
     };
 
     const renderProduct = ({ item }: { item: any }) => (
@@ -168,7 +265,12 @@ export default function CatalogScreen() {
             activeOpacity={0.9}
         >
             <View style={styles.imageContainer}>
-                <Image source={{ uri: getImageUrl(item.image || item.images?.[0]) }} style={styles.productImage} />
+                <Image
+                    source={{ uri: getImageUrl(item.image || item.images?.[0]) }}
+                    style={styles.productImage}
+                    resizeMode="cover"
+                    resizeMethod="resize"
+                />
                 <TouchableOpacity
                     style={styles.favoriteButton}
                     onPress={() => handleToggleFavorite(item)}
@@ -182,7 +284,7 @@ export default function CatalogScreen() {
             </View>
 
             <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.productName} numberOfLines={1}>{item?.name?.toLowerCase() || ''}</Text>
                 <Text style={styles.designText}>DESIGN NO. {item.designNumber || item.ref || 'N/A'}</Text>
                 <Text style={styles.tagText}>TAG NO. {item.tagNumber || 'N/A'}</Text>
                 <View style={styles.weightRow}>
@@ -201,10 +303,10 @@ export default function CatalogScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+            <StatusBar barStyle="dark-content" backgroundColor={NAVY} />
 
             <LinearGradient
-                colors={[NAVY, NAVY_MID, '#09101d']}
+                colors={[NAVY, NAVY, NAVY, NAVY]}
                 style={styles.background}
             />
 
@@ -228,10 +330,15 @@ export default function CatalogScreen() {
                             placeholder="Search masterpiece..."
                             placeholderTextColor={TEXT_MUTED}
                             value={searchQuery}
-                            onChangeText={setSearchQuery}
+                            onChangeText={handleSearchTextChange}
                             onSubmitEditing={handleSearch}
                             returnKeyType="search"
                         />
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={handleClearSearch} style={styles.clearBtn}>
+                                <Icon name="close" size={16} color={TEXT_MUTED} />
+                            </TouchableOpacity>
+                        )}
                     </View>
                     <TouchableOpacity style={styles.refineBtn} onPress={() => setShowRefine(true)}>
                         <Icon name="tune" size={20} color={GOLD} />
@@ -257,40 +364,71 @@ export default function CatalogScreen() {
                 </ScrollView>
             </View>
 
-            <FlatList
-                data={filteredProducts}
-                renderItem={renderProduct}
-                keyExtractor={item => (item._id || item.id || '').toString()}
-                numColumns={2}
-                contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]}
-                columnWrapperStyle={styles.columnWrapper}
-                showsVerticalScrollIndicator={false}
-                ListHeaderComponent={
-                    <View style={styles.listHeader}>
-                        <Text style={styles.resultsCount}>{filteredProducts.length} DESIGNS FOUND</Text>
-                        <View style={styles.headerLine} />
-                    </View>
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyState}>
-                        <Icon name="search-off" size={60} color={NAVY_BORDER} />
-                        <Text style={styles.emptyText}>No matches found</Text>
-                    </View>
-                }
-            />
+            {loading ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color={GOLD} />
+                </View>
+            ) : (
+                <FlatList
+                    data={filteredProducts}
+                    renderItem={renderProduct}
+                    keyExtractor={item => (item._id || item.id || '').toString()}
+                    numColumns={2}
+                    contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]}
+                    columnWrapperStyle={styles.columnWrapper}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    onEndReached={handleLoadMore}
+                    onEndReachedThreshold={0.4}
+                    ListHeaderComponent={
+                        <View style={styles.listHeader}>
+                            <Text style={styles.resultsCount}>{filteredProducts.length} DESIGNS LOADED</Text>
+                            <View style={styles.headerLine} />
+                        </View>
+                    }
+                    ListEmptyComponent={
+                        <View style={styles.emptyState}>
+                            <Icon name="search-off" size={60} color={NAVY_BORDER} />
+                            <Text style={styles.emptyText}>No matches found</Text>
+                        </View>
+                    }
+                    ListFooterComponent={
+                        loadingMore ? (
+                            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                                <ActivityIndicator size="small" color={GOLD} />
+                                <Text style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 6, fontWeight: '600' }}>Loading more...</Text>
+                            </View>
+                        ) : currentPage < totalPages ? (
+                            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                                <Text style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: '600' }}>Scroll for more</Text>
+                            </View>
+                        ) : filteredProducts.length > 0 ? (
+                            <></>
+                        ) : null
+                    }
+                />
+            )}
 
             <BottomNav activeTab="Catalog" />
 
-            <Modal visible={showRefine} transparent animationType="fade" onRequestClose={() => setShowRefine(false)}>
+            <Modal visible={showRefine} transparent animationType="slide" onRequestClose={() => setShowRefine(false)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
+
+                        {/* ── Header ── */}
+                        <View style={styles.modalHandle} />
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>REFINE RESULTS</Text>
-                            <TouchableOpacity onPress={() => setShowRefine(false)}>
-                                <Icon name="close" size={24} color={GOLD} />
+                            <View>
+                                <Text style={styles.modalTitle}>REFINE RESULTS</Text>
+                                <Text style={styles.modalSubtitle}>Sort & filter your collection</Text>
+                            </View>
+                            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowRefine(false)}>
+                                <Icon name="close" size={20} color={GOLD} />
                             </TouchableOpacity>
                         </View>
 
+                        {/* ── Sort section ── */}
                         <Text style={styles.modalSub}>SORT BY PREFERENCE</Text>
                         <View style={styles.sortList}>
                             {[
@@ -309,11 +447,58 @@ export default function CatalogScreen() {
                             ))}
                         </View>
 
-                        <TouchableOpacity style={styles.applyBtn} onPress={handleApplyRefine}>
-                            <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={styles.applyGradient}>
-                                <Text style={styles.applyText}>APPLY FILTERS</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
+                        {/* Input row */}
+                        <View style={styles.weightInputRow}>
+                            <View style={styles.weightInputWrap}>
+                                <Text style={styles.weightInputLabel}>MIN</Text>
+                                <View style={styles.weightInputBox}>
+                                    <TextInput
+                                        style={styles.weightInput}
+                                        value={minWeight}
+                                        onChangeText={v => setMinWeight(v.replace(/[^0-9.]/g, ''))}
+                                        placeholder="0"
+                                        placeholderTextColor={TEXT_MUTED}
+                                        keyboardType="decimal-pad"
+                                        returnKeyType="done"
+                                        maxLength={6}
+                                    />
+                                    <Text style={styles.weightUnit}>g</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.weightDividerLine} />
+
+                            <View style={styles.weightInputWrap}>
+                                <Text style={styles.weightInputLabel}>MAX</Text>
+                                <View style={styles.weightInputBox}>
+                                    <TextInput
+                                        style={styles.weightInput}
+                                        value={maxWeight}
+                                        onChangeText={v => setMaxWeight(v.replace(/[^0-9.]/g, ''))}
+                                        placeholder="0"
+                                        placeholderTextColor={TEXT_MUTED}
+                                        keyboardType="decimal-pad"
+                                        returnKeyType="done"
+                                        maxLength={6}
+                                    />
+                                    <Text style={styles.weightUnit}>g</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* ── Footer buttons ── */}
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity style={styles.resetBtn} onPress={handleResetFilters}>
+                                <Icon name="refresh" size={16} color={TEXT_MUTED} />
+                                <Text style={styles.resetText}>RESET</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.applyBtn} onPress={handleApplyRefine}>
+                                <LinearGradient colors={[GOLD_DARK, GOLD, GOLD_LIGHT]} style={styles.applyGradient}>
+                                    <Text style={styles.applyText}>APPLY FILTERS</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
+
                     </View>
                 </View>
             </Modal>
@@ -325,7 +510,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: NAVY },
     background: { ...StyleSheet.absoluteFillObject },
     header: {
-        backgroundColor: 'rgba(11,18,32,0.98)',
+        backgroundColor: 'white',
         borderBottomWidth: 1,
         borderColor: NAVY_BORDER,
         paddingBottom: 15,
@@ -333,10 +518,11 @@ const styles = StyleSheet.create({
     topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, height: 50 },
     headerBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: NAVY_CARD, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER },
     headerTitle: { fontSize: 13, fontWeight: '900', color: GOLD, letterSpacing: 2 },
-    badge: { position: 'absolute', top: 10, right: 10, width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444', borderWidth: 1, borderColor: NAVY },
+    badge: { position: 'absolute', top: 10, right: 10, width: 6, height: 6, borderRadius: 3, backgroundColor: '#BA1A1A', borderWidth: 1, borderColor: NAVY },
     searchWrap: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginTop: 15 },
     searchBar: { flex: 1, height: 48, borderRadius: 14, backgroundColor: NAVY_INPUT, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, borderWidth: 1, borderColor: NAVY_BORDER },
     searchInput: { flex: 1, marginLeft: 10, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500' },
+    clearBtn: { padding: 4, marginLeft: 4 },
     refineBtn: { width: 48, height: 48, borderRadius: 14, backgroundColor: NAVY_CARD, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER },
     filterScroll: { paddingHorizontal: 20, gap: 10, marginTop: 15 },
     filterPill: { paddingHorizontal: 18, height: 34, borderRadius: 12, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, justifyContent: 'center', alignItems: 'center' },
@@ -346,14 +532,14 @@ const styles = StyleSheet.create({
     listContent: { paddingHorizontal: 20, paddingTop: 20 },
     columnWrapper: { justifyContent: 'space-between', marginBottom: 20 },
     productCard: { backgroundColor: NAVY_CARD, borderRadius: 24, padding: 10, borderWidth: 1, borderColor: NAVY_BORDER },
-    imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: '#000' },
+    imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: NAVY_INPUT },
     productImage: { ...StyleSheet.absoluteFillObject },
-    favoriteButton: { position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    favoriteButton: { position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     productInfo: { padding: 8, },
-    productName: { fontSize: 14, fontWeight: '500', color: TEXT_PRIMARY },
+    productName: { fontSize: 14, fontWeight: '500', color: TEXT_PRIMARY, textTransform: 'capitalize' },
     designText: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 0.5 },
-    tagText: { fontSize: 9, fontWeight: '900', color: '#6366f1', letterSpacing: 0.5, marginTop: 2 },
-    weightRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: 'rgba(232,201,122,0.1)' },
+    tagText: { fontSize: 9, fontWeight: '900', color: '#B29146', letterSpacing: 0.5, marginTop: 2 },
+    weightRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: 'rgba(232,201,122,0.5)' },
     weightLabel: { fontSize: 8, fontWeight: '900', color: GOLD_LIGHT },
     weightValue: { fontSize: 11, fontWeight: '800', color: TEXT_PRIMARY },
     viewBtn: { height: 36, backgroundColor: 'rgba(232,201,122,0.08)', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: 'rgba(232,201,122,0.2)' },
@@ -363,17 +549,34 @@ const styles = StyleSheet.create({
     headerLine: { height: 1, width: 30, backgroundColor: GOLD, marginTop: 4 },
     emptyState: { padding: 60, alignItems: 'center', gap: 15 },
     emptyText: { color: TEXT_MUTED, fontSize: 14, fontWeight: '600' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(11,18,32,0.9)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: NAVY_CARD, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, borderWidth: 1, borderColor: NAVY_BORDER },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
-    modalTitle: { fontSize: 13, fontWeight: '900', color: GOLD, letterSpacing: 2 },
-    modalSub: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1.5, marginBottom: 15 },
-    sortList: { gap: 10, marginBottom: 30 },
-    sortOpt: { height: 54, borderRadius: 16, backgroundColor: NAVY_INPUT, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, borderWidth: 1, borderColor: NAVY_BORDER },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(5,10,20,0.92)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: NAVY_CARD, borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12, borderWidth: 1, borderColor: NAVY_BORDER },
+    modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: NAVY_BORDER, alignSelf: 'center', marginBottom: 20 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
+    modalCloseBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: NAVY_INPUT, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: NAVY_BORDER },
+    modalTitle: { fontSize: 14, fontWeight: '900', color: GOLD, letterSpacing: 2 },
+    modalSubtitle: { fontSize: 11, fontWeight: '500', color: TEXT_MUTED, marginTop: 3 },
+    modalSub: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1.5, marginBottom: 12 },
+    sortList: { gap: 8, marginBottom: 28 },
+    sortOpt: { height: 50, borderRadius: 14, backgroundColor: NAVY_INPUT, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, borderWidth: 1, borderColor: NAVY_BORDER },
     sortOptActive: { backgroundColor: GOLD, borderColor: GOLD },
     sortText: { color: TEXT_PRIMARY, fontSize: 14, fontWeight: '600' },
     sortTextActive: { color: NAVY, fontWeight: '900' },
-    applyBtn: { height: 54, borderRadius: 16, overflow: 'hidden', elevation: 8 },
+    // weight range
+    weightRangeBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: GOLD_DIM, borderWidth: 1, borderColor: GOLD_BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, alignSelf: 'flex-start', marginBottom: 16 },
+    weightRangeText: { fontSize: 13, fontWeight: '800', color: GOLD, letterSpacing: 0.5 },
+    weightInputRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 },
+    weightInputWrap: { flex: 1, gap: 6 },
+    weightInputLabel: { fontSize: 9, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1.5 },
+    weightInputBox: { height: 48, borderRadius: 14, backgroundColor: NAVY_INPUT, borderWidth: 1, borderColor: NAVY_BORDER, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+    weightInput: { flex: 1, color: TEXT_PRIMARY, fontSize: 18, fontWeight: '500' },
+    weightUnit: { fontSize: 13, fontWeight: '700', color: TEXT_MUTED },
+    weightDividerLine: { width: 1, height: 54, backgroundColor: NAVY_BORDER },
+    // footer
+    modalFooter: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+    resetBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 54, paddingHorizontal: 18, borderRadius: 14, backgroundColor: NAVY_INPUT, borderWidth: 1, borderColor: NAVY_BORDER },
+    resetText: { fontSize: 11, fontWeight: '900', color: TEXT_MUTED, letterSpacing: 1 },
+    applyBtn: { flex: 1, height: 54, borderRadius: 14, overflow: 'hidden', elevation: 8 },
     applyGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     applyText: { color: NAVY, fontSize: 13, fontWeight: '900', letterSpacing: 1 },
 });

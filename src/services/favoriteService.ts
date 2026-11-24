@@ -1,8 +1,8 @@
 import api from './api';
 
 export const favoriteService = {
-    getFavorites: async (): Promise<any> => {
-        const response = await api.get('/favorites');
+    getFavorites: async (params?: { page?: number; limit?: number }): Promise<any> => {
+        const response = await api.get('/favorites', { params });
         return response.data;
     },
 

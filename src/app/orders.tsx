@@ -9,14 +9,13 @@ import {
     ActivityIndicator,
     RefreshControl,
     StatusBar,
-    Alert,
+    Platform,
+    PermissionsAndroid,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon, { IconName } from '../components/Icon';
-import RNFS from 'react-native-fs';
-import Share from 'react-native-share';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { orderService } from '../services/orderService';
 import { useCart } from '../context/CartContext';
@@ -25,6 +24,7 @@ import { API_BASE_URL, getImageUrl } from '../constants/api';
 import MessageModal from '../components/MessageModal';
 import { B2B } from '../constants/Colors';
 import ScreenHeader from '../components/ScreenHeader';
+import { downloadInvoice } from '../services/invoiceDownload';
 
 const { GOLD, GOLD_LIGHT, GOLD_DARK, NAVY, NAVY_CARD, NAVY_BORDER, NAVY_INPUT, TEXT_PRIMARY, TEXT_MUTED, GOLD_DIM, GOLD_BORDER, NAVY_MID } = B2B;
 
@@ -54,6 +54,11 @@ export default function OrderHistoryScreen() {
         message: string;
         type: 'success' | 'error' | 'info';
         onClose?: () => void;
+        secondaryAction?: {
+            label: string;
+            icon?: string;
+            onPress: () => void;
+        };
     }>({
         visible: false,
         title: '',
@@ -91,37 +96,60 @@ export default function OrderHistoryScreen() {
     }, []);
 
     const handleDownloadInvoice = async (dbId: string, logicalId: string) => {
+        if (Platform.OS !== 'android') {
+            setModalConfig({ visible: true, title: 'Info', message: 'Invoice download is only supported on Android.', type: 'info' });
+            return;
+        }
+
         try {
             const token = await storage.getItem('userToken');
             if (!token) {
-                setModalConfig({ visible: true, title: 'Error', message: 'You need to be logged in to view invoices', type: 'error' });
+                setModalConfig({ visible: true, title: 'Error', message: 'You need to be logged in to view invoices.', type: 'error' });
                 return;
             }
 
-            const downloadDir = RNFS.CachesDirectoryPath;
-            if (!downloadDir) {
-                setModalConfig({ visible: true, title: 'Error', message: 'Storage not available on this device', type: 'error' });
-                return;
-            }
-
-            const fileUri = downloadDir + `/Invoice-${logicalId}.pdf`;
-            const downloadRes = await RNFS.downloadFile({
-                fromUrl: `${API_BASE_URL}/orders/${dbId}/invoice`,
-                toFile: fileUri,
-                headers: {
-                    Authorization: `Bearer ${token}`
+            // ── Permission gate (Android 9 / API 28 and below only) ────────────
+            // Android 10+ uses scoped storage — DownloadManager writes to the
+            // public Downloads folder without any storage permission.
+            if (Platform.Version < 29) {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+                    {
+                        title: 'Storage Permission Required',
+                        message: 'This app needs storage access to save your invoice to the Downloads folder.',
+                        buttonPositive: 'Allow',
+                        buttonNegative: 'Deny',
+                    }
+                );
+                if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                    setModalConfig({ visible: true, title: 'Permission Denied', message: 'Storage permission is required to download invoices on this device.', type: 'error' });
+                    return;
                 }
-            }).promise;
+            }
 
-            if (downloadRes.statusCode === 200) {
-                await Share.open({ url: `file://${fileUri}`, type: 'application/pdf' });
-            } else {
-                setModalConfig({ visible: true, title: 'Error', message: 'Failed to download invoice', type: 'error' });
+            setDownloading(logicalId);
+
+            // ── Hand off to Android's native DownloadManager ───────────────────
+            // From this point Android owns the download:
+            //   • Shows a progress notification in the system tray
+            //   • Shows a "Download complete" notification when done
+            //   • Tapping the notification opens the PDF in the default viewer
+            //   • File appears in Files, Downloads app, and Recent Downloads
+            const result = await downloadInvoice({
+                url: `${API_BASE_URL}/orders/${dbId}/invoice`,
+                authToken: token,
+                orderId: logicalId,
+            });
+
+            if (!result.success) {
+                setModalConfig({ visible: true, title: 'Download Failed', message: result.error, type: 'error' });
             }
         } catch (error: any) {
             console.error('Invoice download error:', error);
-            const msg = error.response?.data?.message || 'Could not download invoice';
+            const msg = error?.message || 'Could not start the download. Please try again.';
             setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
+        } finally {
+            setDownloading(null);
         }
     };
 
@@ -154,7 +182,7 @@ export default function OrderHistoryScreen() {
             case 'SHIPPED':
                 return {
                     label: 'Shipment',
-                    color: '#6366f1',
+                    color: '#B29146',
                     bg: 'rgba(99, 102, 241, 0.15)',
                     icon: 'local-shipping'
                 };
@@ -162,14 +190,14 @@ export default function OrderHistoryScreen() {
             case 'DELIVERED':
                 return {
                     label: 'Delivered',
-                    color: '#10b981',
+                    color: '#765A13',
                     bg: 'rgba(16, 185, 129, 0.15)',
                     icon: 'check-circle'
                 };
             case 'CANCELLED':
                 return {
                     label: 'Cancelled',
-                    color: '#ef4444',
+                    color: '#BA1A1A',
                     bg: 'rgba(239, 68, 68, 0.15)',
                     icon: 'close'
                 };
@@ -185,10 +213,10 @@ export default function OrderHistoryScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+            <StatusBar barStyle="dark-content" backgroundColor={NAVY} />
 
             <LinearGradient
-                colors={[NAVY, NAVY_MID, '#111D35']}
+                colors={[NAVY, NAVY, NAVY, NAVY]}
                 locations={[0, 0.5, 1]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -204,6 +232,7 @@ export default function OrderHistoryScreen() {
                     setModalConfig(prev => ({ ...prev, visible: false }));
                     if (modalConfig.onClose) modalConfig.onClose();
                 }}
+                secondaryAction={modalConfig.secondaryAction}
             />
 
             <ScreenHeader
@@ -312,7 +341,7 @@ export default function OrderHistoryScreen() {
                                                 <View key={idx} style={styles.expandedItemRow}>
                                                     <Image source={{ uri: imgUrl }} style={styles.expandedItemImage} />
                                                     <View style={styles.expandedItemDetails}>
-                                                        <Text style={styles.expandedItemName} numberOfLines={1}>{productName}</Text>
+                                                        <Text style={styles.expandedItemName} numberOfLines={1}>{productName?.toLowerCase() || ''}</Text>
                                                         <Text style={styles.expandedItemText} numberOfLines={1}>DESIGN NO. {item.designNumber || productDesign || 'N/A'}</Text>
                                                         <Text style={styles.expandedItemText} numberOfLines={1}>TAG NO. {item.tagNumber || item.product?.tagNumber || 'N/A'}</Text>
                                                         <View style={styles.expandedItemMetaRow}>
@@ -347,6 +376,7 @@ export default function OrderHistoryScreen() {
                                     <TouchableOpacity
                                         style={styles.invoiceBtn}
                                         onPress={() => handleDownloadInvoice(order._id, order.orderId)}
+                                        disabled={downloading === order.orderId}
                                     >
                                         <LinearGradient
                                             colors={[GOLD_DARK, GOLD]}
@@ -354,8 +384,14 @@ export default function OrderHistoryScreen() {
                                             end={{ x: 1, y: 1 }}
                                             style={styles.invoiceGradient}
                                         />
-                                        <Icon name="receipt-long" size={18} color={NAVY} />
-                                        <Text style={styles.invoiceBtnText}>INVOICE</Text>
+                                        {downloading === order.orderId ? (
+                                            <ActivityIndicator size="small" color={NAVY} />
+                                        ) : (
+                                            <>
+                                                <Icon name="receipt-long" size={18} color={NAVY} />
+                                                <Text style={styles.invoiceBtnText}>INVOICE</Text>
+                                            </>
+                                        )}
                                     </TouchableOpacity>
                                 </View>
                             </TouchableOpacity>
@@ -420,7 +456,7 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     activeTab: {
-        backgroundColor: 'rgba(201,168,76,0.05)',
+        backgroundColor: 'rgba(201,168,76,0.15)',
     },
     tabText: {
         fontSize: 12,
@@ -449,7 +485,8 @@ const styles = StyleSheet.create({
     orderCard: {
         backgroundColor: NAVY_CARD,
         borderRadius: 24,
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 14,
         marginBottom: 20,
         borderWidth: 1,
         borderColor: NAVY_BORDER,
@@ -639,6 +676,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: TEXT_PRIMARY,
         marginBottom: 2,
+        textTransform: 'capitalize'
     },
     expandedItemText: {
         fontSize: 10,
@@ -681,7 +719,7 @@ const styles = StyleSheet.create({
     expandedNoteLabel: {
         fontSize: 9,
         fontWeight: '900',
-        color: '#fb7185',
+        color: '#BA1A1A',
     },
     expandedNoteText: {
         fontSize: 9,

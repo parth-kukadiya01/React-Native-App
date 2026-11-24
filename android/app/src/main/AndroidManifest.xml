@@ -1,6 +1,33 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- ── Core permissions ─────────────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+        WRITE_EXTERNAL_STORAGE:
+        Required only on Android 9 (API 28) and below to write to the public
+        Downloads directory.  Android 10+ (API 29+) uses scoped storage, so
+        DownloadManager handles the write internally — no permission needed.
+        The maxSdkVersion="28" attribute ensures it is NOT requested on newer
+        devices, keeping the permission prompt absent on Android 10+.
+    -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!--
+        READ_EXTERNAL_STORAGE:
+        Needed on API 28 and below to read back the file for opening/sharing.
+        On API 33+ the granular media permissions replace this, but since
+        DownloadManager puts files in the public Downloads dir they are always
+        accessible without any permission on API 29–32.
+    -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
       android:name=".MainApplication"
@@ -23,5 +50,22 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+
+      <!--
+          FileProvider — required so that the DownloadManager's "tap to open"
+          notification can hand the PDF file URI to a PDF viewer on API 24+.
+          DownloadManager registers its own provider internally on modern Android,
+          but declaring ours ensures compatibility with older ROMs and custom
+          launchers that query our app's provider directly.
+      -->
+      <provider
+          android:name="androidx.core.content.FileProvider"
+          android:authorities="${applicationId}.fileprovider"
+          android:exported="false"
+          android:grantUriPermissions="true">
+          <meta-data
+              android:name="android.support.FILE_PROVIDER_PATHS"
+              android:resource="@xml/file_provider_paths" />
+      </provider>
     </application>
 </manifest>

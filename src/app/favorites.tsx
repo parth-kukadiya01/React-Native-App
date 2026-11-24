@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -32,7 +32,11 @@ export default function FavoritesScreen() {
     const insets = useSafeAreaInsets();
     const [favorites, setFavorites] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [addingToCart, setAddingToCart] = useState<string | null>(null);
+    const isFetchingRef = useRef(false);
 
     const [modalConfig, setModalConfig] = useState<{
         visible: boolean;
@@ -51,12 +55,23 @@ export default function FavoritesScreen() {
 
     const { updateCartCount } = useCart();
 
-    const fetchFavorites = async () => {
+    const fetchFavorites = async (page: number = 1) => {
+        if (isFetchingRef.current) return;
+        isFetchingRef.current = true;
         try {
-            setLoading(true);
-            const res = await favoriteService.getFavorites();
+            if (page === 1) setLoading(true);
+            else setLoadingMore(true);
+            const res = await favoriteService.getFavorites({ page, limit: 20 });
             if (res.success) {
-                setFavorites(res.data || []);
+                const items = res.data || [];
+                const pages = res.totalPages ?? res.pagination?.totalPages ?? 1;
+                setTotalPages(pages);
+                setCurrentPage(page);
+                if (page === 1) {
+                    setFavorites(items);
+                } else {
+                    setFavorites(prev => [...prev, ...items]);
+                }
             }
         } catch (error: any) {
             console.error('Error fetching favorites:', error);
@@ -64,13 +79,21 @@ export default function FavoritesScreen() {
             setModalConfig({ visible: true, title: 'Error', message: msg, type: 'error' });
         } finally {
             setLoading(false);
+            setLoadingMore(false);
+            isFetchingRef.current = false;
+        }
+    };
+
+    const handleLoadMore = () => {
+        if (!loadingMore && !loading && currentPage < totalPages) {
+            fetchFavorites(currentPage + 1);
         }
     };
 
     useFocusEffect(
         useCallback(() => {
             updateCartCount();
-            fetchFavorites();
+            fetchFavorites(1);
         }, [])
     );
 
@@ -102,17 +125,22 @@ export default function FavoritesScreen() {
             activeOpacity={0.9}
         >
             <View style={styles.imageContainer}>
-                <Image source={{ uri: item.image }} style={styles.productImage} />
+                <Image
+                    source={{ uri: item.image }}
+                    style={styles.productImage}
+                    resizeMode="cover"
+                    resizeMethod="resize"
+                />
                 <TouchableOpacity
                     style={styles.favoriteButton}
                     onPress={() => removeFavorite((item.id || item._id).toString())}
                 >
-                    <Icon name="favorite" size={18} color="#f43f5e" />
+                    <Icon name="favorite" size={18} color={GOLD} />
                 </TouchableOpacity>
             </View>
 
             <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.productName} numberOfLines={1}>{item?.name?.toLowerCase() || ''}</Text>
 
                 <View style={styles.weightRow}>
                     {/* <View style={styles.weightItem}> */}
@@ -135,8 +163,8 @@ export default function FavoritesScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
-            <LinearGradient colors={[NAVY, NAVY_MID, '#09101d']} style={styles.background} />
+            <StatusBar barStyle="dark-content" backgroundColor={NAVY} />
+            <LinearGradient colors={[NAVY, NAVY, NAVY, NAVY]} style={styles.background} />
 
             <MessageModal
                 visible={modalConfig.visible}
@@ -188,6 +216,22 @@ export default function FavoritesScreen() {
                     contentContainerStyle={styles.gridContent}
                     columnWrapperStyle={styles.gridColumn}
                     showsVerticalScrollIndicator={false}
+                    onEndReached={handleLoadMore}
+                    onEndReachedThreshold={0.4}
+                    ListFooterComponent={
+                        loadingMore ? (
+                            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                                <ActivityIndicator size="small" color={GOLD} />
+                                <Text style={{ color: TEXT_MUTED, fontSize: 11, marginTop: 6, fontWeight: '600' }}>Loading more...</Text>
+                            </View>
+                        ) : currentPage < totalPages ? (
+                            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                                <Text style={{ color: TEXT_MUTED, fontSize: 11, fontWeight: '600' }}>Scroll for more</Text>
+                            </View>
+                        ) : favorites.length > 0 ? (
+                            <></>
+                        ) : null
+                    }
                 />
             )}
 
@@ -210,13 +254,13 @@ const styles = StyleSheet.create({
     // productCard: { borderRadius: 24, padding: 10, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 5 },
     productCard: { backgroundColor: NAVY_CARD, borderRadius: 24, padding: 10, borderWidth: 1, borderColor: NAVY_BORDER },
     // imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: NAVY_INPUT },
-    imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: '#000' },
+    imageContainer: { width: '100%', aspectRatio: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: NAVY_INPUT },
     // productImage: { position: 'absolute', width: '100%', height: '100%' },
     productImage: { ...StyleSheet.absoluteFillObject },
-    favoriteButton: { position: 'absolute', top: 8, right: 8, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    favoriteButton: { position: 'absolute', top: 8, right: 8, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     productInfo: { padding: 8, },
-    productName: { fontSize: 14, fontWeight: '500', color: TEXT_PRIMARY, },
-    weightRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: 'rgba(232,201,122,0.1)' },
+    productName: { fontSize: 14, fontWeight: '500', color: TEXT_PRIMARY, textTransform: 'capitalize' },
+    weightRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: 'rgba(232,201,122,0.5)' },
     weightItem: { alignItems: 'center' },
     weightLabel: { fontSize: 8, fontWeight: '900', color: GOLD_LIGHT },
     weightValue: { fontSize: 13, fontWeight: '700', color: TEXT_PRIMARY },

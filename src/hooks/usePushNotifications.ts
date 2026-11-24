@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Platform, PermissionsAndroid } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
+import { Platform, PermissionsAndroid, Alert } from 'react-native';
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import { useSelector } from 'react-redux';
 import { notificationService } from '../services/notificationService';
 import type { RootState } from '../store';
@@ -19,10 +19,15 @@ export const usePushNotifications = () => {
                 authStatus === messaging.AuthorizationStatus.PROVISIONAL;
             return enabled;
         } else if (Platform.OS === 'android') {
-            // Android 13+ requires POST_NOTIFICATIONS permission
             if (Platform.Version >= 33) {
                 const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+                    PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+                    {
+                        title: 'Notification Permission',
+                        message: 'Allow SVGold to send you order updates and alerts.',
+                        buttonPositive: 'Allow',
+                        buttonNegative: 'Deny',
+                    }
                 );
                 return granted === PermissionsAndroid.RESULTS.GRANTED;
             }
@@ -48,24 +53,48 @@ export const usePushNotifications = () => {
         }
     }
 
+    const showForegroundNotification = (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+        const title = remoteMessage.notification?.title ?? 'SVGold';
+        const body = remoteMessage.notification?.body ?? '';
+
+        if (body) {
+            Alert.alert(title, body);
+        }
+    };
+
     // Get the device FCM token once on mount
     useEffect(() => {
         registerForPushNotificationsAsync().then(token => {
             setFcmToken(token);
         });
 
-        // Foreground message handler
         const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
-            console.log('Foreground notification:', remoteMessage);
+            console.log('Foreground notification received:', remoteMessage);
+            showForegroundNotification(remoteMessage);
+        });
+
+        const unsubscribeOpened = messaging().onNotificationOpenedApp(remoteMessage => {
+            console.log('Notification opened app from background:', remoteMessage);
+        });
+
+        messaging().getInitialNotification().then(remoteMessage => {
+            if (remoteMessage) {
+                console.log('App opened from quit state by notification:', remoteMessage);
+            }
+        });
+
+        const unsubscribeTokenRefresh = messaging().onTokenRefresh(token => {
+            console.log('FCM token refreshed:', token);
+            setFcmToken(token);
         });
 
         return () => {
             unsubscribeForeground();
+            unsubscribeOpened();
+            unsubscribeTokenRefresh();
         };
     }, []);
 
-    // Register token with backend ONLY when user is logged in.
-    // Re-runs automatically after login (authToken changes from null → value).
     useEffect(() => {
         if (!authToken || !fcmToken) return;
 

@@ -274,10 +274,10 @@ export default function CartScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+            <StatusBar barStyle="dark-content" backgroundColor={NAVY} />
 
             <LinearGradient
-                colors={[NAVY, B2B.NAVY_MID, '#111D35']}
+                colors={[NAVY, NAVY, NAVY, NAVY]}
                 locations={[0, 0.5, 1]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -323,11 +323,12 @@ export default function CartScreen() {
                     {cartItems.map((item) => (
                         <View key={item._id} style={styles.itemCard}>
                             <View style={styles.itemMain}>
-                                <Image source={{ uri: item.product?.images?.[0] || 'https://lh3.googleusercontent.com/aida-public/placeholder' }} style={styles.itemImage} />
+                                <Image source={{ uri: item.product?.images?.[0] || 'https://lh3.googleusercontent.com/aida-public/placeholder' }} style={styles.itemImage} resizeMode="cover"
+                                    resizeMethod="resize" />
                                 <View style={styles.itemInfo}>
                                     <View style={styles.itemHeader}>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.itemName} numberOfLines={1}>{item.product?.name || 'Unknown Product'}</Text>
+                                            <Text style={styles.itemName} numberOfLines={1}>{item?.product?.name?.toLowerCase() || 'Unknown Product'}</Text>
                                             <Text style={styles.itemRef}>DESIGN NO. {item.product?.designNumber || 'N/A'}</Text>
                                             <Text style={styles.itemRef}>TAG NO. {item.product?.tagNumber || 'N/A'}</Text>
                                         </View>
@@ -418,7 +419,7 @@ export default function CartScreen() {
                 </View>
             </ScrollView>
 
-            <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+            <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom + 20, 24) }]}>
                 <TouchableOpacity
                     style={[styles.submitButton, (submitting || cartItems.length === 0) && { opacity: 0.7 }]}
                     onPress={handleSubmitOrder}
@@ -510,7 +511,7 @@ export default function CartScreen() {
 
                             {!!tpinError && (
                                 <View style={tpinStyles.errorRow}>
-                                    <Icon name="error-outline" size={16} color="#fb7185" />
+                                    <Icon name="error-outline" size={16} color="#BA1A1A" />
                                     <Text style={tpinStyles.errorText}>{tpinError}</Text>
                                 </View>
                             )}
@@ -569,17 +570,17 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     scrollContent: {
-        paddingTop: 24,
-        paddingBottom: 160,
+        paddingTop: 16,
+        paddingBottom: 140,
         paddingHorizontal: 20,
     },
     card: {
-        borderRadius: 24,
-        padding: 24,
+        borderRadius: 16,
+        padding: 20,
         backgroundColor: NAVY_CARD,
         borderWidth: 1,
         borderColor: NAVY_BORDER,
-        marginBottom: 32,
+        marginBottom: 20,
         overflow: 'hidden',
     },
     cardLabel: {
@@ -646,12 +647,12 @@ const styles = StyleSheet.create({
         letterSpacing: -0.5,
     },
     itemsList: {
-        gap: 20,
-        marginBottom: 32,
+        gap: 16,
+        marginBottom: 24,
     },
     itemCard: {
-        borderRadius: 24,
-        padding: 20,
+        borderRadius: 16,
+        padding: 16,
         backgroundColor: NAVY_CARD,
         borderWidth: 1,
         borderColor: NAVY_BORDER,
@@ -659,13 +660,13 @@ const styles = StyleSheet.create({
     },
     itemMain: {
         flexDirection: 'row',
-        gap: 20,
-        marginBottom: 20,
+        gap: 16,
+        marginBottom: 16,
     },
     itemImage: {
-        width: 72,
-        height: 72,
-        borderRadius: 20,
+        width: 64,
+        height: 64,
+        borderRadius: 16,
         backgroundColor: NAVY_INPUT,
         borderWidth: 1,
         borderColor: NAVY_BORDER,
@@ -683,6 +684,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: TEXT_PRIMARY,
         marginBottom: 4,
+        textTransform: 'capitalize'
     },
     itemRef: {
         fontSize: 11,
@@ -716,8 +718,8 @@ const styles = StyleSheet.create({
     },
     itemControls: {
         flexDirection: 'row',
-        gap: 20,
-        marginBottom: 20,
+        gap: 16,
+        marginBottom: 16,
     },
     controlGroup: {
         flex: 1,
@@ -730,7 +732,7 @@ const styles = StyleSheet.create({
         // letterSpacing: 1,
     },
     dateDisplay: {
-        height: 44,
+        height: 40,
         backgroundColor: NAVY_INPUT,
         borderRadius: 12,
         borderWidth: 1,
@@ -749,9 +751,9 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     qtyBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         backgroundColor: NAVY_INPUT,
         justifyContent: 'center',
         alignItems: 'center',
@@ -759,14 +761,14 @@ const styles = StyleSheet.create({
         borderColor: NAVY_BORDER,
     },
     qtyText: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '800',
         color: TEXT_PRIMARY,
         width: 32,
         textAlign: 'center',
     },
     itemNoteRow: {
-        marginBottom: 16,
+        marginBottom: 12,
     },
     noteDisplay: {
         backgroundColor: NAVY_INPUT,
@@ -785,7 +787,7 @@ const styles = StyleSheet.create({
     itemDateRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
         gap: 8,
     },
     dateTextSmall: {
@@ -797,7 +799,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         borderTopWidth: 1,
         borderTopColor: NAVY_BORDER,
-        paddingTop: 16,
+        paddingTop: 12,
     },
     weightCol: {
         flex: 1,
@@ -821,7 +823,7 @@ const styles = StyleSheet.create({
         color: TEXT_PRIMARY,
     },
     breakdownCard: {
-        marginBottom: 32,
+        marginBottom: 24,
     },
     breakdownTitle: {
         fontSize: 10,
@@ -906,14 +908,14 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        padding: 24,
+        padding: 20,
         borderTopWidth: 1,
         borderTopColor: NAVY_BORDER,
-        backgroundColor: 'rgba(11,18,32,0.95)',
+        backgroundColor: 'white',
     },
     submitButton: {
-        height: 60,
-        borderRadius: 20,
+        height: 52,
+        borderRadius: 16,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1038,7 +1040,7 @@ const tpinStyles = StyleSheet.create({
     },
     errorText: {
         fontSize: 13,
-        color: '#fb7185',
+        color: '#BA1A1A',
         fontWeight: '600',
     },
     actionBtn: {

@@ -41,6 +41,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ item, width = DEFAULT_CARD_WI
                     source={{ uri: getImageUrl(item.images?.[0] || item.image) }}
                     style={styles.productImage}
                     resizeMode="contain"
+                    resizeMethod='resize'
                 />
                 <TouchableOpacity
                     style={styles.favoriteButton}
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
         padding: 12,
         borderWidth: 1,
         borderColor: NAVY_BORDER,
-        shadowColor: '#000',
+        shadowColor: '#1C1B1B',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.2,
         shadowRadius: 16,
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: 'rgba(0,0,0,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     productTag: {
         fontSize: 9,
         fontWeight: '700',
-        color: '#6366f1',
+        color: '#B29146',
         marginBottom: 8,
         letterSpacing: 0.5,
     },

@@ -9,15 +9,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import Icon from './Icon';
+import { B2B } from '../constants/Colors';
 
-const GOLD = '#C9A84C';
-const GOLD_LIGHT = '#E8C97A';
-const GOLD_DARK = '#B09440';
-const NAVY = '#0B1220';
-const NAVY_CARD = '#162040';
-const NAVY_BORDER = '#2A3F6A';
-const TEXT_PRIMARY = '#F0EAD6';
-const TEXT_MUTED = '#8899BB';
+const {
+    GOLD, GOLD_LIGHT, GOLD_DARK,
+    NAVY, NAVY_CARD, NAVY_BORDER,
+    TEXT_PRIMARY, TEXT_MUTED
+} = B2B;
 
 type MessageModalProps = {
     visible: boolean;
@@ -26,6 +24,11 @@ type MessageModalProps = {
     type?: 'success' | 'error' | 'info';
     onClose: () => void;
     buttonText?: string;
+    secondaryAction?: {
+        label: string;
+        icon?: string;
+        onPress: () => void;
+    };
 };
 
 const MessageModal = ({
@@ -35,6 +38,7 @@ const MessageModal = ({
     type = 'success',
     onClose,
     buttonText = 'OK',
+    secondaryAction,
 }: MessageModalProps) => {
     return (
         <Modal
@@ -58,7 +62,7 @@ const MessageModal = ({
                         >
                             <Icon
                                 name={type === 'success' ? 'check-circle' : type === 'error' ? 'error-outline' : 'info'}
-                                size={32}
+                                size={28}
                                 color={NAVY}
                             />
                         </LinearGradient>
@@ -68,22 +72,37 @@ const MessageModal = ({
                     <Text style={styles.title}>{title}</Text>
                     <Text style={styles.message}>{message}</Text>
 
-                    {/* Action Button */}
-                    <TouchableOpacity
-                        activeOpacity={0.8}
-                        style={styles.buttonContainer}
-                        onPress={onClose}
-                    >
-                        <LinearGradient
-                            colors={[GOLD_DARK, GOLD, GOLD_LIGHT]}
-                            style={styles.buttonGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
+                    {/* Action Buttons */}
+                    <View style={styles.actionRow}>
+                        {secondaryAction && (
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                style={styles.secondaryButton}
+                                onPress={secondaryAction.onPress}
+                            >
+                                {secondaryAction.icon && (
+                                    <Icon name={secondaryAction.icon as any} size={16} color={TEXT_PRIMARY} style={{ marginRight: 6 }} />
+                                )}
+                                <Text style={styles.secondaryButtonText}>{secondaryAction.label}</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            style={[styles.buttonContainer, secondaryAction ? { flex: 1 } : { width: '100%' }]}
+                            onPress={onClose}
                         >
-                            <Text style={styles.buttonText}>{buttonText}</Text>
-                            <Icon name="arrow-forward" size={16} color={NAVY} style={{ marginLeft: 8 }} />
-                        </LinearGradient>
-                    </TouchableOpacity>
+                            <LinearGradient
+                                colors={[GOLD_DARK, GOLD, GOLD_LIGHT]}
+                                style={styles.buttonGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Text style={styles.buttonText}>{buttonText}</Text>
+                                <Icon name="arrow-forward" size={16} color={NAVY} style={{ marginLeft: 6 }} />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
         </Modal>
@@ -93,25 +112,25 @@ const MessageModal = ({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(5, 8, 15, 0.9)',
+        backgroundColor: 'rgba(28, 27, 27, 0.6)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
     },
     container: {
         width: '100%',
-        maxWidth: 400,
+        maxWidth: 340,
         backgroundColor: NAVY_CARD,
-        borderRadius: 32,
-        padding: 32,
+        borderRadius: 24,
+        padding: 24,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: NAVY_BORDER,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.5,
-        shadowRadius: 40,
-        elevation: 15,
+        shadowColor: '#1C1B1Bs',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        elevation: 10,
         position: 'relative',
         overflow: 'hidden',
     },
@@ -124,39 +143,60 @@ const styles = StyleSheet.create({
         backgroundColor: GOLD,
     },
     iconRing: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         padding: 4,
         backgroundColor: 'rgba(201, 168, 76, 0.15)',
-        marginBottom: 24,
+        marginBottom: 16,
     },
     iconGradient: {
         flex: 1,
-        borderRadius: 32,
+        borderRadius: 24,
         justifyContent: 'center',
         alignItems: 'center',
     },
     title: {
-        fontSize: 22,
+        fontSize: 18,
         fontWeight: '800',
         color: GOLD,
-        marginBottom: 12,
+        marginBottom: 8,
         textAlign: 'center',
         letterSpacing: 0.5,
     },
     message: {
-        fontSize: 14,
+        fontSize: 13,
         color: TEXT_MUTED,
-        lineHeight: 22,
+        lineHeight: 20,
         textAlign: 'center',
-        marginBottom: 32,
+        marginBottom: 24,
         fontWeight: '500',
     },
-    buttonContainer: {
+    actionRow: {
+        flexDirection: 'row',
         width: '100%',
-        height: 56,
-        borderRadius: 16,
+        gap: 12,
+    },
+    secondaryButton: {
+        flex: 1,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: '#49454F',
+        borderWidth: 1,
+        borderColor: NAVY_BORDER,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    secondaryButtonText: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: TEXT_PRIMARY,
+        letterSpacing: 1,
+    },
+    buttonContainer: {
+        height: 48,
+        borderRadius: 12,
         overflow: 'hidden',
     },
     buttonGradient: {
@@ -166,9 +206,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     buttonText: {
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: '900',
-        color: NAVY,
+        color: '#FFFFFF',
         letterSpacing: 1,
         textTransform: 'uppercase',
     },

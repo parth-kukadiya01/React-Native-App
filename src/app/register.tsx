@@ -5,32 +5,31 @@ import {
     View,
     TextInput,
     TouchableOpacity,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
     Alert,
     ActivityIndicator,
     Animated,
 } from 'react-native';
+import KeyboardAwareScreen from '../components/KeyboardAwareScreen';
 import { LinearGradient } from 'react-native-linear-gradient';
 import { StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon, { IconName } from '../components/Icon';
 import { authService } from '../services/authService';
 import MessageModal from '../components/MessageModal';
 
-// Design tokens — same palette as Login
-const GOLD = '#C9A84C';
-const GOLD_LIGHT = '#E8C97A';
-const NAVY = '#0B1220';
-const NAVY_CARD = '#162040';
-const NAVY_INPUT = '#1C2A4A';
-const NAVY_BORDER = '#2A3F6A';
-const TEXT_PRIMARY = '#F0EAD6';
-const TEXT_MUTED = '#8899BB';
-const ERROR_COLOR = '#F87171';
-const SUCCESS_COLOR = '#34D399';
+import { B2B } from '../constants/Colors';
+
+const {
+    GOLD, GOLD_LIGHT, GOLD_DARK,
+    NAVY, NAVY_CARD, NAVY_INPUT, NAVY_BORDER,
+    TEXT_PRIMARY, TEXT_MUTED
+} = B2B;
+
+const ERROR_COLOR = B2B.ERROR;
+const SUCCESS_COLOR = '#10b981'; // Standard success green
+
 
 type FormData = {
     fullName: string;
@@ -161,6 +160,7 @@ const fieldStyles = StyleSheet.create({
 
 export default function RegisterScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
+    const insets = useSafeAreaInsets();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -246,8 +246,14 @@ export default function RegisterScreen() {
             if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
                 const serverFieldErrors: FormErrors = {};
                 error.response.data.errors.forEach((err: any) => {
-                    if (err.path && err.msg) {
-                        serverFieldErrors[err.path as keyof FormData] = err.msg;
+                    const field = err.path || err.field;
+                    const msg = err.msg || err.message;
+                    if (field && msg) {
+                        if (serverFieldErrors[field as keyof FormData]) {
+                            serverFieldErrors[field as keyof FormData] += `\n${msg}`;
+                        } else {
+                            serverFieldErrors[field as keyof FormData] = msg;
+                        }
                     }
                 });
                 if (Object.keys(serverFieldErrors).length > 0) {
@@ -257,7 +263,7 @@ export default function RegisterScreen() {
                 }
             }
 
-            const message = error.response?.data?.message || 'Registration failed. Please try again.';
+            const message = error.response?.data?.message || error.response?.data?.error || error.response?.data?.msg || error.message || 'Registration failed. Please try again.';
             setServerError(message);
             triggerShake();
         }
@@ -265,10 +271,10 @@ export default function RegisterScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+            <StatusBar barStyle="dark-content" backgroundColor={NAVY} />
 
             <LinearGradient
-                colors={[NAVY, '#0D1628', '#111D35']}
+                colors={[NAVY, NAVY, NAVY, NAVY]}
                 locations={[0, 0.5, 1]}
                 style={styles.background}
                 start={{ x: 0, y: 0 }}
@@ -289,7 +295,7 @@ export default function RegisterScreen() {
             />
 
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                     <Icon name="arrow-back-ios" size={18} color={GOLD} style={{ marginLeft: 5 }} />
                 </TouchableOpacity>
@@ -300,225 +306,219 @@ export default function RegisterScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            <KeyboardAwareScreen
                 style={{ flex: 1 }}
+                contentContainerStyle={styles.scrollContent}
             >
-                <ScrollView
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {/* Intro */}
-                    <View style={styles.introSection}>
-                        <Text style={styles.mainTitle}>Create Your{'\n'}Wholesale Account</Text>
-                        <Text style={styles.subTitle}>
-                            Apply for exclusive access to SV Gold's wholesale jewelry catalog. All applications are reviewed by our team.
+                {/* Intro */}
+                <View style={styles.introSection}>
+                    <Text style={styles.mainTitle}>Create Your{'\n'}Wholesale Account</Text>
+                    <Text style={styles.subTitle}>
+                        Apply for exclusive access to SV Gold's wholesale jewelry catalog. All applications are reviewed by our team.
+                    </Text>
+                </View>
+
+                {/* Steps indicator */}
+                <View style={styles.stepsRow}>
+                    {['Account Info', 'Business', 'Security'].map((step, i) => (
+                        <View key={i} style={styles.stepItem}>
+                            <View style={[styles.stepDot, i === 0 ? styles.stepDotActive : null]}>
+                                <Text style={[styles.stepNum, i === 0 ? styles.stepNumActive : null]}>{i + 1}</Text>
+                            </View>
+                            <Text style={[styles.stepLabel, i === 0 ? styles.stepLabelActive : null]}>{step}</Text>
+                        </View>
+                    ))}
+                </View>
+
+                {/* Form card */}
+                <Animated.View style={[styles.card, { transform: [{ translateX: shakeAnim }] }]}>
+
+                    {/* Server error banner */}
+                    {serverError ? (
+                        <View style={styles.errorBanner}>
+                            <Icon name="error-outline" size={16} color={ERROR_COLOR} />
+                            <Text style={styles.errorBannerText}>{serverError}</Text>
+                        </View>
+                    ) : null}
+
+                    {/* Section: Personal */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Icon name="person" size={15} color={GOLD} />
+                            <Text style={styles.sectionTitle}>Account Information</Text>
+                        </View>
+                        <View style={styles.fieldList}>
+                            <Field
+                                label="Full Name"
+                                placeholder="John Doe"
+                                iconName="person"
+                                value={formData.fullName}
+                                onChangeText={(v) => handleChange('fullName', v)}
+                                error={errors.fullName}
+                                returnKeyType="next"
+                            />
+                            <Field
+                                label="Business Email"
+                                placeholder="contact@company.com"
+                                iconName="alternate-email"
+                                value={formData.email}
+                                onChangeText={(v) => handleChange('email', v)}
+                                error={errors.email}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                returnKeyType="next"
+                            />
+                            <Field
+                                label="Phone Number"
+                                placeholder="+1 (555) 000-0000"
+                                iconName="smartphone"
+                                value={formData.phone}
+                                onChangeText={(v) => handleChange('phone', v)}
+                                error={errors.phone}
+                                keyboardType="phone-pad"
+                                autoCapitalize="none"
+                                returnKeyType="next"
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.sectionDivider} />
+
+                    {/* Section: Business */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Icon name="storefront" size={15} color={GOLD} />
+                            <Text style={styles.sectionTitle}>Business Details</Text>
+                        </View>
+                        <View style={styles.fieldList}>
+                            <Field
+                                label="Company Name"
+                                placeholder="Jewelry Co. Ltd."
+                                iconName="storefront"
+                                value={formData.companyName}
+                                onChangeText={(v) => handleChange('companyName', v)}
+                                error={errors.companyName}
+                                returnKeyType="next"
+                            />
+                            <Field
+                                label="Tax ID / EIN"
+                                placeholder="Registration / Tax Number"
+                                iconName="verified-user"
+                                value={formData.taxId}
+                                onChangeText={(v) => handleChange('taxId', v)}
+                                error={errors.taxId}
+                                autoCapitalize="characters"
+                                badge="REQUIRED"
+                                returnKeyType="next"
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.sectionDivider} />
+
+                    {/* Section: Security */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Icon name="lock" size={15} color={GOLD} />
+                            <Text style={styles.sectionTitle}>Security</Text>
+                        </View>
+                        <View style={styles.fieldList}>
+                            <Field
+                                label="Password"
+                                placeholder="Minimum 8 characters"
+                                iconName="lock"
+                                value={formData.password}
+                                onChangeText={(v) => handleChange('password', v)}
+                                error={errors.password}
+                                secureTextEntry={!showPassword}
+                                autoCapitalize="none"
+                                returnKeyType="next"
+                                rightElement={
+                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                                        <Icon name={showPassword ? 'visibility' : 'visibility-off'} size={20} color={TEXT_MUTED} />
+                                    </TouchableOpacity>
+                                }
+                            />
+
+                            {/* Password strength indicator */}
+                            {formData.password.length > 0 && (
+                                <View style={styles.strengthRow}>
+                                    {[1, 2, 3, 4].map((level) => {
+                                        const strength = formData.password.length >= 12 ? 4
+                                            : formData.password.length >= 10 ? 3
+                                                : formData.password.length >= 8 ? 2
+                                                    : 1;
+                                        const active = level <= strength;
+                                        const color = strength === 1 ? ERROR_COLOR : strength === 2 ? GOLD : strength === 3 ? GOLD_LIGHT : SUCCESS_COLOR;
+                                        return <View key={level} style={[styles.strengthBar, active ? { backgroundColor: color } : null]} />;
+                                    })}
+                                    <Text style={styles.strengthLabel}>
+                                        {formData.password.length >= 12 ? 'Strong'
+                                            : formData.password.length >= 10 ? 'Good'
+                                                : formData.password.length >= 8 ? 'Fair' : 'Weak'}
+                                    </Text>
+                                </View>
+                            )}
+
+                            <Field
+                                label="Confirm Password"
+                                placeholder="Re-enter your password"
+                                iconName="lock"
+                                value={formData.repassword}
+                                onChangeText={(v) => handleChange('repassword', v)}
+                                error={errors.repassword}
+                                secureTextEntry={!showConfirmPassword}
+                                autoCapitalize="none"
+                                returnKeyType="done"
+                                onSubmitEditing={handleRegister}
+                                rightElement={
+                                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeBtn}>
+                                        <Icon name={showConfirmPassword ? 'visibility' : 'visibility-off'} size={20} color={TEXT_MUTED} />
+                                    </TouchableOpacity>
+                                }
+                            />
+                        </View>
+                    </View>
+
+                    {/* Notice */}
+                    <View style={styles.notice}>
+                        <Icon name="info-outline" size={14} color={GOLD} />
+                        <Text style={styles.noticeText}>
+                            After submitting, your application will be reviewed by our team. You'll receive an email once your account is approved.
                         </Text>
                     </View>
 
-                    {/* Steps indicator */}
-                    <View style={styles.stepsRow}>
-                        {['Account Info', 'Business', 'Security'].map((step, i) => (
-                            <View key={i} style={styles.stepItem}>
-                                <View style={[styles.stepDot, i === 0 ? styles.stepDotActive : null]}>
-                                    <Text style={[styles.stepNum, i === 0 ? styles.stepNumActive : null]}>{i + 1}</Text>
-                                </View>
-                                <Text style={[styles.stepLabel, i === 0 ? styles.stepLabelActive : null]}>{step}</Text>
-                            </View>
-                        ))}
-                    </View>
+                    {/* Submit Button */}
+                    <TouchableOpacity onPress={handleRegister} disabled={loading} activeOpacity={0.85}>
+                        <LinearGradient
+                            colors={[GOLD, GOLD_LIGHT, GOLD]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.submitBtn}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color={NAVY} />
+                            ) : (
+                                <>
+                                    <Icon name="verified-user" size={20} color={NAVY} />
+                                    <Text style={styles.submitBtnText}>Create Business Account</Text>
+                                </>
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
 
-                    {/* Form card */}
-                    <Animated.View style={[styles.card, { transform: [{ translateX: shakeAnim }] }]}>
+                </Animated.View>
 
-                        {/* Server error banner */}
-                        {serverError ? (
-                            <View style={styles.errorBanner}>
-                                <Icon name="error-outline" size={16} color={ERROR_COLOR} />
-                                <Text style={styles.errorBannerText}>{serverError}</Text>
-                            </View>
-                        ) : null}
+                {/* Footer */}
+                <View style={styles.footer}>
+                    <Text style={styles.footerText}>Already a partner? </Text>
+                    <TouchableOpacity onPress={() => navigation.reset({ index: 0, routes: [{ name: 'index' }] })}>
+                        <Text style={styles.footerLink}>Sign In</Text>
+                    </TouchableOpacity>
+                </View>
 
-                        {/* Section: Personal */}
-                        <View style={styles.section}>
-                            <View style={styles.sectionHeader}>
-                                <Icon name="person" size={15} color={GOLD} />
-                                <Text style={styles.sectionTitle}>Account Information</Text>
-                            </View>
-                            <View style={styles.fieldList}>
-                                <Field
-                                    label="Full Name"
-                                    placeholder="John Doe"
-                                    iconName="person"
-                                    value={formData.fullName}
-                                    onChangeText={(v) => handleChange('fullName', v)}
-                                    error={errors.fullName}
-                                    returnKeyType="next"
-                                />
-                                <Field
-                                    label="Business Email"
-                                    placeholder="contact@company.com"
-                                    iconName="alternate-email"
-                                    value={formData.email}
-                                    onChangeText={(v) => handleChange('email', v)}
-                                    error={errors.email}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    returnKeyType="next"
-                                />
-                                <Field
-                                    label="Phone Number"
-                                    placeholder="+1 (555) 000-0000"
-                                    iconName="smartphone"
-                                    value={formData.phone}
-                                    onChangeText={(v) => handleChange('phone', v)}
-                                    error={errors.phone}
-                                    keyboardType="phone-pad"
-                                    autoCapitalize="none"
-                                    returnKeyType="next"
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.sectionDivider} />
-
-                        {/* Section: Business */}
-                        <View style={styles.section}>
-                            <View style={styles.sectionHeader}>
-                                <Icon name="storefront" size={15} color={GOLD} />
-                                <Text style={styles.sectionTitle}>Business Details</Text>
-                            </View>
-                            <View style={styles.fieldList}>
-                                <Field
-                                    label="Company Name"
-                                    placeholder="Jewelry Co. Ltd."
-                                    iconName="storefront"
-                                    value={formData.companyName}
-                                    onChangeText={(v) => handleChange('companyName', v)}
-                                    error={errors.companyName}
-                                    returnKeyType="next"
-                                />
-                                <Field
-                                    label="Tax ID / EIN"
-                                    placeholder="Registration / Tax Number"
-                                    iconName="verified-user"
-                                    value={formData.taxId}
-                                    onChangeText={(v) => handleChange('taxId', v)}
-                                    error={errors.taxId}
-                                    autoCapitalize="characters"
-                                    badge="REQUIRED"
-                                    returnKeyType="next"
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.sectionDivider} />
-
-                        {/* Section: Security */}
-                        <View style={styles.section}>
-                            <View style={styles.sectionHeader}>
-                                <Icon name="lock" size={15} color={GOLD} />
-                                <Text style={styles.sectionTitle}>Security</Text>
-                            </View>
-                            <View style={styles.fieldList}>
-                                <Field
-                                    label="Password"
-                                    placeholder="Minimum 8 characters"
-                                    iconName="lock"
-                                    value={formData.password}
-                                    onChangeText={(v) => handleChange('password', v)}
-                                    error={errors.password}
-                                    secureTextEntry={!showPassword}
-                                    autoCapitalize="none"
-                                    returnKeyType="next"
-                                    rightElement={
-                                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                                            <Icon name={showPassword ? 'visibility' : 'visibility-off'} size={20} color={TEXT_MUTED} />
-                                        </TouchableOpacity>
-                                    }
-                                />
-
-                                {/* Password strength indicator */}
-                                {formData.password.length > 0 && (
-                                    <View style={styles.strengthRow}>
-                                        {[1, 2, 3, 4].map((level) => {
-                                            const strength = formData.password.length >= 12 ? 4
-                                                : formData.password.length >= 10 ? 3
-                                                    : formData.password.length >= 8 ? 2
-                                                        : 1;
-                                            const active = level <= strength;
-                                            const color = strength === 1 ? ERROR_COLOR : strength === 2 ? GOLD : strength === 3 ? GOLD_LIGHT : SUCCESS_COLOR;
-                                            return <View key={level} style={[styles.strengthBar, active ? { backgroundColor: color } : null]} />;
-                                        })}
-                                        <Text style={styles.strengthLabel}>
-                                            {formData.password.length >= 12 ? 'Strong'
-                                                : formData.password.length >= 10 ? 'Good'
-                                                    : formData.password.length >= 8 ? 'Fair' : 'Weak'}
-                                        </Text>
-                                    </View>
-                                )}
-
-                                <Field
-                                    label="Confirm Password"
-                                    placeholder="Re-enter your password"
-                                    iconName="lock"
-                                    value={formData.repassword}
-                                    onChangeText={(v) => handleChange('repassword', v)}
-                                    error={errors.repassword}
-                                    secureTextEntry={!showConfirmPassword}
-                                    autoCapitalize="none"
-                                    returnKeyType="done"
-                                    onSubmitEditing={handleRegister}
-                                    rightElement={
-                                        <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeBtn}>
-                                            <Icon name={showConfirmPassword ? 'visibility' : 'visibility-off'} size={20} color={TEXT_MUTED} />
-                                        </TouchableOpacity>
-                                    }
-                                />
-                            </View>
-                        </View>
-
-                        {/* Notice */}
-                        <View style={styles.notice}>
-                            <Icon name="info-outline" size={14} color={GOLD} />
-                            <Text style={styles.noticeText}>
-                                After submitting, your application will be reviewed by our team. You'll receive an email once your account is approved.
-                            </Text>
-                        </View>
-
-                        {/* Submit Button */}
-                        <TouchableOpacity onPress={handleRegister} disabled={loading} activeOpacity={0.85}>
-                            <LinearGradient
-                                colors={[GOLD, GOLD_LIGHT, GOLD]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.submitBtn}
-                            >
-                                {loading ? (
-                                    <ActivityIndicator color={NAVY} />
-                                ) : (
-                                    <>
-                                        <Icon name="verified-user" size={20} color={NAVY} />
-                                        <Text style={styles.submitBtnText}>Create Business Account</Text>
-                                    </>
-                                )}
-                            </LinearGradient>
-                        </TouchableOpacity>
-
-                    </Animated.View>
-
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <Text style={styles.footerText}>Already a partner? </Text>
-                        <TouchableOpacity onPress={() => navigation.reset({ index: 0, routes: [{ name: 'index' }] })}>
-                            <Text style={styles.footerLink}>Sign In</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.bottomBar} />
-                </ScrollView>
-            </KeyboardAvoidingView>
+                <View style={styles.bottomBar} />
+            </KeyboardAwareScreen>
         </View>
     );
 }
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
         backgroundColor: NAVY_CARD,
         borderRadius: 20, borderWidth: 1, borderColor: NAVY_BORDER,
         padding: 24, gap: 0,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.35, shadowRadius: 24, elevation: 10,
+        shadowColor: '#1C1B1B', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.35, shadowRadius: 24, elevation: 10,
     },
 
     // Error banner

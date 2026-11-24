@@ -10,6 +10,7 @@ import {
     ActivityIndicator,
     Alert,
     StatusBar,
+    Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'react-native-linear-gradient';
 import Icon, { IconName } from '../components/Icon';
@@ -40,6 +41,7 @@ export default function SearchScreen() {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const [modalConfig, setModalConfig] = useState<{
         visible: boolean;
         title: string;
@@ -63,6 +65,20 @@ export default function SearchScreen() {
     const [sortOrder, setSortOrder] = useState('desc');
     const [showFilters, setShowFilters] = useState(false);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Track keyboard height so ScrollView adds bottom padding and content stays above keyboard
+    useEffect(() => {
+        const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+            setKeyboardHeight(e.endCoordinates.height);
+        });
+        const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardHeight(0);
+        });
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
 
     // Auto-search when query changes (2+ chars)
     useEffect(() => {
@@ -291,10 +307,10 @@ export default function SearchScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
+            <StatusBar barStyle="dark-content" backgroundColor={NAVY} />
 
             <LinearGradient
-                colors={[NAVY, NAVY_MID, '#111D35']}
+                colors={[NAVY, NAVY, NAVY, NAVY]}
                 locations={[0, 0.5, 1]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -406,9 +422,10 @@ export default function SearchScreen() {
             )}
 
             <ScrollView
-                contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 145 }]}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 145, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 40 }]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
             >
                 {/* Searching State */}
                 {loading && (
@@ -437,6 +454,7 @@ export default function SearchScreen() {
                                 scrollEnabled={false}
                                 columnWrapperStyle={styles.gridColumn}
                                 contentContainerStyle={styles.gridContent}
+                                keyboardShouldPersistTaps="handled"
                             />
                         ) : (
                             <View style={styles.emptyContainer}>
@@ -499,6 +517,7 @@ export default function SearchScreen() {
                                 scrollEnabled={false}
                                 columnWrapperStyle={styles.gridColumn}
                                 contentContainerStyle={styles.gridContent}
+                                keyboardShouldPersistTaps="handled"
                             />
                         ) : (
                             <Text style={styles.emptySubtitle}>No recommendations available in current catalog.</Text>
@@ -613,7 +632,7 @@ const styles = StyleSheet.create({
         width: 240,
         borderRadius: 20,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: '#1C1B1B',
         shadowOffset: { width: 0, height: 12 },
         shadowOpacity: 0.5,
         shadowRadius: 24,
@@ -736,7 +755,7 @@ const styles = StyleSheet.create({
     clearText: {
         fontSize: 10,
         fontWeight: '900',
-        color: '#ef4444',
+        color: '#BA1A1A',
         letterSpacing: 1,
     },
     recentCard: {

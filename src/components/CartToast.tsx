@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 16,
         gap: 12,
-        shadowColor: '#000',
+        shadowColor: '#1C1B1B',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.4,
         shadowRadius: 16,

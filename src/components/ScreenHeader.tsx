@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#fb7185',
+        backgroundColor: '#BA1A1A',
         borderWidth: 1,
         borderColor: NAVY,
     },

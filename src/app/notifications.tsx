@@ -92,7 +92,7 @@ export default function NotificationsScreen() {
 
     const getColor = (type: string) => {
         switch (type) {
-            case 'ORDER': return '#10b981';
+            case 'ORDER': return '#765A13';
             case 'PROMOTION': return GOLD;
             case 'SYSTEM': return GOLD_LIGHT;
             default: return GOLD;
@@ -111,8 +111,8 @@ export default function NotificationsScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={NAVY} />
-            <LinearGradient colors={[NAVY, NAVY_MID, '#09101d']} style={styles.background} />
+            <StatusBar barStyle="dark-content" backgroundColor={NAVY} />
+            <LinearGradient colors={[NAVY, NAVY, NAVY, NAVY]} style={styles.background} />
 
             <MessageModal
                 visible={modalConfig.visible}
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     background: { ...StyleSheet.absoluteFillObject },
     refreshBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: NAVY_INPUT, borderWidth: 1, borderColor: NAVY_BORDER },
     content: { paddingVertical: 16, paddingHorizontal: 16, paddingBottom: 60 },
-    card: { flexDirection: 'row', padding: 16, borderRadius: 20, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, alignItems: 'center', gap: 14, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 4 },
+    card: { flexDirection: 'row', padding: 16, borderRadius: 20, backgroundColor: NAVY_CARD, borderWidth: 1, borderColor: NAVY_BORDER, alignItems: 'center', gap: 14, marginBottom: 12, shadowColor: '#1C1B1B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 4 },
     unreadCard: { borderColor: 'rgba(201,168,76,0.2)', backgroundColor: 'rgba(201,168,76,0.03)' },
     iconContainer: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     textContainer: { flex: 1, gap: 4 },

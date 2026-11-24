@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    file_provider_paths.xml
+    Declares which directories the FileProvider can share URIs for.
+
+    external-path  → /sdcard/  (Environment.getExternalStorageDirectory())
+    This covers the public Downloads folder at /sdcard/Download/,
+    which is where DownloadManager saves files by default.
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Covers Environment.getExternalStoragePublicDirectory(DIRECTORY_DOWNLOADS) -->
+    <external-path
+        name="external_downloads"
+        path="Download/" />
+
+    <!-- Fallback: full external storage root (needed on some OEM ROMs) -->
+    <external-path
+        name="external_root"
+        path="." />
+</paths>

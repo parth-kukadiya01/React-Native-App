@@ -78,7 +78,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
                         <Icon
                             name={item.icon as any}
                             size={24}
-                            color={isActive(item.id) ? GOLD : '#5a6b8e'}
+                            color={isActive(item.id) ? GOLD : TEXT_MUTED}
                         />
                         {item.id === 'Orders' && cartCount > 0 && (
                             <View style={styles.badgeCount}>
@@ -86,7 +86,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeTab }) => {
                             </View>
                         )}
                         {item.id === 'Notifications' && unreadCount > 0 && (
-                            <View style={[styles.badgeCount, { backgroundColor: '#ef4444' }]}>
+                            <View style={[styles.badgeCount, { backgroundColor: '#BA1A1A' }]}>
                                 <Text style={styles.badgeText}>{unreadCount}</Text>
                             </View>
                         )}
@@ -111,14 +111,14 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingTop: 16,
-        backgroundColor: '#0a101a', // Deeper navy for bottom nav
+        backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.05)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -12 },
-        shadowOpacity: 0.3,
-        shadowRadius: 24,
-        elevation: 15,
+        borderTopColor: 'rgba(0,0,0,0.05)',
+        shadowColor: '#1C1B1B',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.10,
+        shadowRadius: 12,
+        elevation: 12,
     },
     navItem: {
         alignItems: 'center',
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     navText: {
         fontSize: 8,
         fontWeight: '900',
-        color: '#5a6b8e',
+        color: TEXT_MUTED,
         letterSpacing: 1,
     },
     activeIndicator: {
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1.5,
-        borderColor: '#0a101a',
+        borderColor: '#FFFFFF',
         paddingHorizontal: 2,
     },
     badgeText: {

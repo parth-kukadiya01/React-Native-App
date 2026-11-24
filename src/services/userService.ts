@@ -7,6 +7,13 @@ export const userService = {
         return response.data;
     },
 
+    trackAppOpen: async (): Promise<void> => {
+        try {
+            await api.head('/users/app-open');
+        } catch {
+        }
+    },
+
     updateProfile: async (data: Record<string, any>): Promise<any> => {
         const response = await api.put('/users/profile', data);
         return response.data;

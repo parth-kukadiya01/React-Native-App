@@ -19,17 +19,16 @@ const handleAuthError = async () => {
         await storage.deleteItem('userToken');
         await storage.deleteItem('userData');
         console.log('Session cleared - redirecting to login');
+    } catch (storageError) {
+        console.error('Error clearing storage:', storageError);
+    } finally {
         if (onUnauthorized) {
             onUnauthorized();
         }
-    } catch (storageError) {
-        console.error('Error clearing storage:', storageError);
+        setTimeout(() => {
+            isRedirecting = false;
+        }, 2000);
     }
-
-    // Reset debounce after short delay
-    setTimeout(() => {
-        isRedirecting = false;
-    }, 2000);
 };
 
 const api = axios.create({
